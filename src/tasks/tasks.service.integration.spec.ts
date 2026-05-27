@@ -1,3 +1,12 @@
+/**
+ * Integration tests for TasksService + PostgreSQL.
+ *
+ * Scope:
+ * - Validates real Drizzle ORM queries
+ * - Ensures persistence layer works correctly
+ * - Uses real PostgreSQL database interactions
+ */
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 

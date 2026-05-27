@@ -1,3 +1,12 @@
+/**
+ * Unit tests for TasksService.
+ *
+ * Scope:
+ * - Validates service business logic in isolation
+ * - Database layer is mocked
+ * - Ensures service behavior without real PostgreSQL interaction
+ */
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../db/db', () => ({
