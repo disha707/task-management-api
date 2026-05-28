@@ -4,12 +4,16 @@ import {
   Delete,
   Get,
   Param,
-  Post,
+  ParseIntPipe,
   Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
 
 import { TasksService } from './tasks.service';
+import { BulkDeleteDto } from './dto/bulk-delete.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { GetTasksQueryDto } from './dto/get-tasks-query.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Controller('tasks')
@@ -17,13 +21,13 @@ export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
   @Get()
-  async getTasks() {
-    return this.tasksService.getTasks();
+  async getTasks(@Query() query: GetTasksQueryDto) {
+    return this.tasksService.getTasks(query);
   }
 
   @Get(':id')
-  async getTaskById(@Param('id') id: string) {
-    return this.tasksService.getTaskById(Number(id));
+  async getTaskById(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.getTaskById(id);
   }
 
   @Post()
@@ -31,19 +35,21 @@ export class TasksController {
     return this.tasksService.createTask(dto);
   }
 
+  @Delete('bulk')
+  async deleteTasksInBatch(@Body() dto: BulkDeleteDto) {
+    return this.tasksService.deleteTasksInBatch(dto);
+  }
+
   @Delete(':id')
-  async deleteTask(@Param('id') id: string) {
-    return this.tasksService.deleteTask(Number(id));
+  async deleteTask(@Param('id', ParseIntPipe) id: number) {
+    return this.tasksService.deleteTask(id);
   }
 
   @Patch(':id')
-    async updateTask(
-    @Param('id') id: string,
+  async updateTask(
+    @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateTaskDto,
-    ) {
-    return this.tasksService.updateTask(
-        Number(id),
-        dto,
-    );
+  ) {
+    return this.tasksService.updateTask(id, dto);
   }
 }
