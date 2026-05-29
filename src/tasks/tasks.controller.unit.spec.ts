@@ -1,54 +1,67 @@
 /**
- * Unit tests for TasksController.
+ * Unit tests for TasksController — Classical (Detroit) style.
  *
  * Scope:
- *   These tests verify that each route handler delegates to the correct
- *   TasksService method with the correct arguments and passes through whatever
- *   the service returns.  TasksService is replaced by a mock object, so
- *   there is no database, no HTTP server, and no NestJS request pipeline
- *   (no ValidationPipe, no ParseIntPipe, no guards).
+ *   These tests exercise TasksController with the real TasksService wired in.
+ *   Only the database (the true external boundary) is replaced by a mock.
+ *   No HTTP server is started and no NestJS request pipeline runs
+ *   (no ValidationPipe, no ParseIntPipe).
+ *
+ *   Classical approach: we mock the external boundary (db), use real
+ *   collaborators (TasksService), and assert on *outcomes* — what the
+ *   controller returns — not on which internal methods were called.
  *
  * What coverage do we get from this set of tests?
- *   - Wiring: every handler calls the right service method (not a neighbour)
- *   - Argument forwarding: parsed id and DTO objects reach the service unchanged
- *   - Return value pass-through: the handler returns exactly what the service returns
+ *   - getTasks: returns paginated data and meta from the real service
+ *   - getTaskById: returns the correct task; propagates NotFoundException
+ *   - createTask: returns the newly created task record
+ *   - updateTask: returns the updated task; propagates NotFoundException
+ *   - deleteTask: returns the deleted task; propagates NotFoundException
+ *   - deleteTasksInBatch: returns deleted tasks array; propagates
+ *     NotFoundException when any id is missing
  *
  * What is NOT covered here (and where it IS covered):
- *   - HTTP status codes, headers, and body serialisation
- *       → tasks.service.integration.spec.ts (real NestJS pipeline + real DB)
- *   - Request validation (class-validator, ParseIntPipe) — same file above
- *   - Business rules and database behaviour — same file above
+ *   - Real SQL correctness and DB-level behaviour
+ *       → tasks.service.integration.spec.ts
+ *   - HTTP status codes, request parsing, and validation pipes
+ *       → would require a running HTTP server
  */
 
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../db/db', () => ({
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    transaction: vi.fn(),
+  },
+}));
+
+import { db } from '../db/db';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
-import { CreateTaskDto } from './dto/create-task.dto';
-import { UpdateTaskDto } from './dto/update-task.dto';
-import { GetTasksQueryDto } from './dto/get-tasks-query.dto';
-import { BulkDeleteDto } from './dto/bulk-delete.dto';
 
-const mockService = {
-  getTasks: vi.fn(),
-  getTaskById: vi.fn(),
-  createTask: vi.fn(),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn(),
-  deleteTasksInBatch: vi.fn(),
-};
+function mockChain(value: unknown) {
+  const p = Promise.resolve(value) as any;
+  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'values', 'set', 'returning'];
+  for (const m of methods) p[m] = vi.fn().mockReturnValue(p);
+  return p;
+}
 
 const makeTask = (overrides = {}) => ({
   id: 1,
   title: 'Test task',
   description: null as string | null,
   completed: false,
-  createdAt: new Date(),
+  createdAt: new Date('2024-01-01'),
   ...overrides,
 });
 
-describe('TasksController Unit Tests', () => {
+describe('TasksController Unit Tests (Classical)', () => {
   let controller: TasksController;
 
   beforeEach(async () => {
@@ -56,7 +69,7 @@ describe('TasksController Unit Tests', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TasksController],
-      providers: [{ provide: TasksService, useValue: mockService }],
+      providers: [TasksService],
     }).compile();
 
     controller = module.get<TasksController>(TasksController);
@@ -65,94 +78,117 @@ describe('TasksController Unit Tests', () => {
   // ─── getTasks ─────────────────────────────────────────────────────────────
 
   describe('getTasks', () => {
-    it('calls service.getTasks with the query object and returns the result', async () => {
-      const query: GetTasksQueryDto = { page: 2, limit: 5, search: 'drizzle' };
-      const serviceResult = { data: [makeTask()], meta: { page: 2, limit: 5, total: 1, totalPages: 1 } };
-      mockService.getTasks.mockResolvedValue(serviceResult);
+    it('returns paginated data with meta', async () => {
+      const task = makeTask();
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 1 }]))
+        .mockReturnValueOnce(mockChain([task]));
 
-      const result = await controller.getTasks(query);
+      const result = await controller.getTasks({ page: 1, limit: 10 });
 
-      expect(mockService.getTasks).toHaveBeenCalledOnce();
-      expect(mockService.getTasks).toHaveBeenCalledWith(query);
-      expect(result).toBe(serviceResult);
+      expect(result.data).toEqual([task]);
+      expect(result.meta).toEqual({ page: 1, limit: 10, total: 1, totalPages: 1 });
     });
   });
 
   // ─── getTaskById ──────────────────────────────────────────────────────────
 
   describe('getTaskById', () => {
-    it('calls service.getTaskById with the parsed id and returns the result', async () => {
+    it('returns the task when found', async () => {
       const task = makeTask({ id: 42 });
-      mockService.getTaskById.mockResolvedValue(task);
+      (db.select as any).mockReturnValue(mockChain([task]));
 
       const result = await controller.getTaskById(42);
 
-      expect(mockService.getTaskById).toHaveBeenCalledOnce();
-      expect(mockService.getTaskById).toHaveBeenCalledWith(42);
-      expect(result).toBe(task);
+      expect(result).toEqual(task);
+    });
+
+    it('propagates NotFoundException for an unknown id', async () => {
+      (db.select as any).mockReturnValue(mockChain([]));
+
+      await expect(controller.getTaskById(999)).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── createTask ───────────────────────────────────────────────────────────
 
   describe('createTask', () => {
-    it('calls service.createTask with the DTO and returns the created task', async () => {
-      const dto: CreateTaskDto = { title: 'New task', description: 'Some info' };
+    it('returns the newly created task', async () => {
       const created = makeTask({ title: 'New task', description: 'Some info' });
-      mockService.createTask.mockResolvedValue(created);
+      (db.insert as any).mockReturnValue(mockChain([created]));
 
-      const result = await controller.createTask(dto);
+      const result = await controller.createTask({ title: 'New task', description: 'Some info' });
 
-      expect(mockService.createTask).toHaveBeenCalledOnce();
-      expect(mockService.createTask).toHaveBeenCalledWith(dto);
-      expect(result).toBe(created);
+      expect(result).toEqual(created);
     });
   });
 
   // ─── updateTask ───────────────────────────────────────────────────────────
 
   describe('updateTask', () => {
-    it('calls service.updateTask with the parsed id and DTO, returns the updated task', async () => {
-      const dto: UpdateTaskDto = { title: 'Updated', completed: true };
-      const updated = makeTask({ title: 'Updated', completed: true });
-      mockService.updateTask.mockResolvedValue(updated);
+    it('returns the updated task', async () => {
+      const existing = makeTask();
+      const updated = makeTask({ title: 'New title' });
+      (db.select as any).mockReturnValue(mockChain([existing]));
+      (db.update as any).mockReturnValue(mockChain([updated]));
 
-      const result = await controller.updateTask(7, dto);
+      const result = await controller.updateTask(1, { title: 'New title' });
 
-      expect(mockService.updateTask).toHaveBeenCalledOnce();
-      expect(mockService.updateTask).toHaveBeenCalledWith(7, dto);
-      expect(result).toBe(updated);
+      expect(result.title).toBe('New title');
+    });
+
+    it('propagates NotFoundException when task does not exist', async () => {
+      (db.select as any).mockReturnValue(mockChain([]));
+
+      await expect(controller.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── deleteTask ───────────────────────────────────────────────────────────
 
   describe('deleteTask', () => {
-    it('calls service.deleteTask with the parsed id and returns the deleted task', async () => {
+    it('returns the deleted task', async () => {
       const task = makeTask({ id: 3 });
-      mockService.deleteTask.mockResolvedValue(task);
+      (db.select as any).mockReturnValue(mockChain([task]));
+      (db.delete as any).mockReturnValue(mockChain(undefined));
 
       const result = await controller.deleteTask(3);
 
-      expect(mockService.deleteTask).toHaveBeenCalledOnce();
-      expect(mockService.deleteTask).toHaveBeenCalledWith(3);
-      expect(result).toBe(task);
+      expect(result).toEqual(task);
+    });
+
+    it('propagates NotFoundException when task does not exist', async () => {
+      (db.select as any).mockReturnValue(mockChain([]));
+
+      await expect(controller.deleteTask(999)).rejects.toThrow(NotFoundException);
     });
   });
 
   // ─── deleteTasksInBatch ───────────────────────────────────────────────────
 
   describe('deleteTasksInBatch', () => {
-    it('calls service.deleteTasksInBatch with the DTO and returns the deleted tasks array', async () => {
-      const dto: BulkDeleteDto = { ids: [1, 2, 3] };
-      const deleted = [makeTask({ id: 1 }), makeTask({ id: 2 }), makeTask({ id: 3 })];
-      mockService.deleteTasksInBatch.mockResolvedValue(deleted);
+    it('returns all deleted tasks', async () => {
+      const task1 = makeTask({ id: 1 });
+      const task2 = makeTask({ id: 2, title: 'Task 2' });
+      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db));
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([task1]))
+        .mockReturnValueOnce(mockChain([task2]));
+      (db.delete as any).mockReturnValue(mockChain(undefined));
 
-      const result = await controller.deleteTasksInBatch(dto);
+      const result = await controller.deleteTasksInBatch({ ids: [1, 2] });
 
-      expect(mockService.deleteTasksInBatch).toHaveBeenCalledOnce();
-      expect(mockService.deleteTasksInBatch).toHaveBeenCalledWith(dto);
-      expect(result).toBe(deleted);
+      expect(result).toHaveLength(2);
+    });
+
+    it('propagates NotFoundException when any id is not found', async () => {
+      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db));
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([makeTask()]))
+        .mockReturnValueOnce(mockChain([]));
+      (db.delete as any).mockReturnValue(mockChain(undefined));
+
+      await expect(controller.deleteTasksInBatch({ ids: [1, 999] })).rejects.toThrow(NotFoundException);
     });
   });
 });
