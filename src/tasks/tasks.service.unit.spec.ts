@@ -332,4 +332,53 @@ describe('TasksService Unit Tests', () => {
       await expect(service.deleteTasksInBatch({ ids: [1, 999] })).rejects.toThrow(NotFoundException);
     });
   });
+
+  // ─── getStats ─────────────────────────────────────────────────────────────
+
+  describe('getStats', () => {
+    it('returns zero counts when there are no tasks', async () => {
+      (db.select as any).mockReturnValue(mockChain([]));
+
+      const result = await service.getStats();
+
+      expect(result).toEqual({
+        total: 0,
+        completed: 0,
+        pending: 0,
+        byPriority: { High: 0, Medium: 0, Low: 0 },
+      });
+    });
+
+    it('returns correct totals and priority breakdown for a mixed set', async () => {
+      (db.select as any).mockReturnValue(
+        mockChain([
+          makeTask({ id: 1, priority: 'High', completed: false }),
+          makeTask({ id: 2, priority: 'High', completed: true }),
+          makeTask({ id: 3, priority: 'Medium', completed: false }),
+          makeTask({ id: 4, priority: 'Low', completed: true }),
+        ]),
+      );
+
+      const result = await service.getStats();
+
+      expect(result.total).toBe(4);
+      expect(result.completed).toBe(2);
+      expect(result.pending).toBe(2);
+      expect(result.byPriority).toEqual({ High: 2, Medium: 1, Low: 1 });
+    });
+
+    it('reports all tasks as pending when none are completed', async () => {
+      (db.select as any).mockReturnValue(
+        mockChain([
+          makeTask({ id: 1, completed: false }),
+          makeTask({ id: 2, completed: false }),
+        ]),
+      );
+
+      const result = await service.getStats();
+
+      expect(result.completed).toBe(0);
+      expect(result.pending).toBe(2);
+    });
+  });
 });
