@@ -337,7 +337,10 @@ describe('TasksService Unit Tests', () => {
 
   describe('getStats', () => {
     it('returns zero counts when there are no tasks', async () => {
-      (db.select as any).mockReturnValue(mockChain([]));
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 0 }]))
+        .mockReturnValueOnce(mockChain([{ completed: 0 }]))
+        .mockReturnValueOnce(mockChain([]));
 
       const result = await service.getStats();
 
@@ -350,14 +353,16 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('returns correct totals and priority breakdown for a mixed set', async () => {
-      (db.select as any).mockReturnValue(
-        mockChain([
-          makeTask({ id: 1, priority: 'High', completed: false }),
-          makeTask({ id: 2, priority: 'High', completed: true }),
-          makeTask({ id: 3, priority: 'Medium', completed: false }),
-          makeTask({ id: 4, priority: 'Low', completed: true }),
-        ]),
-      );
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 4 }]))
+        .mockReturnValueOnce(mockChain([{ completed: 2 }]))
+        .mockReturnValueOnce(
+          mockChain([
+            { priority: 'High', cnt: 2 },
+            { priority: 'Medium', cnt: 1 },
+            { priority: 'Low', cnt: 1 },
+          ]),
+        );
 
       const result = await service.getStats();
 
@@ -368,12 +373,10 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('reports all tasks as pending when none are completed', async () => {
-      (db.select as any).mockReturnValue(
-        mockChain([
-          makeTask({ id: 1, completed: false }),
-          makeTask({ id: 2, completed: false }),
-        ]),
-      );
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 2 }]))
+        .mockReturnValueOnce(mockChain([{ completed: 0 }]))
+        .mockReturnValueOnce(mockChain([{ priority: 'Medium', cnt: 2 }]));
 
       const result = await service.getStats();
 

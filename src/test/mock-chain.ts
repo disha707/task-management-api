@@ -10,7 +10,7 @@ import { vi } from 'vitest';
  */
 export function mockChain(value: unknown) {
   const p = Promise.resolve(value) as any;
-  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'values', 'set', 'returning'];
+  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'values', 'set', 'returning', 'groupBy'];
   for (const m of methods) {
     p[m] = vi.fn().mockReturnValue(p);
   }

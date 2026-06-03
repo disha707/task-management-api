@@ -123,15 +123,25 @@ export class TasksService {
   }
 
   async getStats() {
-    const allTasks = await db.select().from(tasks);
+    const [{ total }] = await db.select({ total: count() }).from(tasks);
+    const [{ completed }] = await db
+      .select({ completed: count() })
+      .from(tasks)
+      .where(eq(tasks.completed, true));
 
-    const total = allTasks.length;
-    const completed = allTasks.filter((t) => t.completed).length;
-    const byPriority = {
-      High: allTasks.filter((t) => t.priority === 'High').length,
-      Medium: allTasks.filter((t) => t.priority === 'Medium').length,
-      Low: allTasks.filter((t) => t.priority === 'Low').length,
+    const priorityRows = await db
+      .select({ priority: tasks.priority, cnt: count() })
+      .from(tasks)
+      .groupBy(tasks.priority);
+
+    const byPriority: { High: number; Medium: number; Low: number } = {
+      High: 0,
+      Medium: 0,
+      Low: 0,
     };
+    for (const row of priorityRows) {
+      byPriority[row.priority] = row.cnt;
+    }
 
     return { total, completed, pending: total - completed, byPriority };
   }
