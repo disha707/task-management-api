@@ -74,6 +74,32 @@ describe('Tasks E2E', () => {
     return { Authorization: `Bearer ${accessToken}` };
   }
 
+  // ─── GET /tasks/stats ────────────────────────────────────────────────────
+
+  describe('GET /tasks/stats', () => {
+    it('returns 401 without auth token', async () => {
+      const res = await request(app.getHttpServer()).get('/tasks/stats');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns stats shape with correct keys', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/tasks/stats')
+        .set(authHeader());
+
+      expect(res.status).toBe(200);
+      expect(typeof res.body.total).toBe('number');
+      expect(typeof res.body.completed).toBe('number');
+      expect(typeof res.body.pending).toBe('number');
+      expect(res.body.byPriority).toMatchObject({
+        High: expect.any(Number),
+        Medium: expect.any(Number),
+        Low: expect.any(Number),
+      });
+      expect(res.body.total).toBe(res.body.completed + res.body.pending);
+    });
+  });
+
   // ─── Unauthenticated — guard blocks all task routes ───────────────────────
 
   describe('JWT guard: requests without Authorization header', () => {
