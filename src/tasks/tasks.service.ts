@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, or, SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, SQL } from 'drizzle-orm';
 
 import { db } from '../db/db';
 import { tasks } from '../db/schema';
@@ -127,16 +127,12 @@ export class TasksService {
 
     await db.transaction(async (tx) => {
       for (const id of dto.ids) {
-        const result = await tx.select().from(tasks).where(eq(tasks.id, id));
-        const task = result[0];
-
-        if (!task) {
-          throw new NotFoundException(`Task with id ${id} not found`);
-        }
-
-        await tx.delete(tasks).where(eq(tasks.id, id));
+        const [task] = await tx.select().from(tasks).where(eq(tasks.id, id));
+        if (!task) throw new NotFoundException(`Task with id ${id} not found`);
         deletedTasks.push(task);
       }
+
+      await tx.delete(tasks).where(inArray(tasks.id, dto.ids));
     });
 
     return deletedTasks;

@@ -276,7 +276,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
       expect(db.transaction).toHaveBeenCalledTimes(1);
     });
 
-    it('calls db.delete once per id inside the transaction', async () => {
+    it('calls db.delete exactly once for all ids (batch delete)', async () => {
       const task1 = makeTask({ id: 1 });
       const task2 = makeTask({ id: 2, title: 'Task 2' });
       const task3 = makeTask({ id: 3, title: 'Task 3' });
@@ -290,7 +290,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
       await service.deleteTasksInBatch({ ids: [1, 2, 3] });
 
-      expect(db.delete).toHaveBeenCalledTimes(3);
+      expect(db.delete).toHaveBeenCalledTimes(1);
     });
 
     it('throws NotFoundException without completing all deletes when an id is missing', async () => {
