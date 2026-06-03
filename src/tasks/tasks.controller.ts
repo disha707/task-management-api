@@ -28,6 +28,11 @@ export class TasksController {
     return this.tasksService.getTasks(query);
   }
 
+  @Get('stats')
+  async getStats() {
+    return this.tasksService.getStats();
+  }
+
   @Get(':id')
   async getTaskById(@Param('id', ParseIntPipe) id: number) {
     return this.tasksService.getTaskById(id);
