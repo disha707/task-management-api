@@ -39,14 +39,7 @@ import * as bcrypt from 'bcrypt';
 import { db } from '../db/db';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-
-function mockChain(value: unknown) {
-  const p = Promise.resolve(value) as any;
-  ['from', 'where', 'values', 'returning'].forEach((m) => {
-    p[m] = vi.fn().mockReturnValue(p);
-  });
-  return p;
-}
+import { mockChain } from '../test/mock-chain';
 
 const existingUser = {
   id: 1,

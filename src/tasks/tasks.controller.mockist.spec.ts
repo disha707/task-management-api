@@ -39,6 +39,7 @@ import { BulkDeleteDto } from './dto/bulk-delete.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { GetTasksQueryDto } from './dto/get-tasks-query.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { makeTask } from '../test/make-task';
 
 const mockService = {
   getTasks: vi.fn(),
@@ -48,15 +49,6 @@ const mockService = {
   deleteTask: vi.fn(),
   deleteTasksInBatch: vi.fn(),
 };
-
-const makeTask = (overrides = {}) => ({
-  id: 1,
-  title: 'Test task',
-  description: null as string | null,
-  completed: false,
-  createdAt: new Date(),
-  ...overrides,
-});
 
 describe('TasksController Unit Tests (Mockist)', () => {
   let controller: TasksController;

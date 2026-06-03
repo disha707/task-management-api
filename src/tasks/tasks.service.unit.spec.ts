@@ -39,28 +39,8 @@ vi.mock('../db/db', () => ({
 
 import { db } from '../db/db';
 import { TasksService } from './tasks.service';
-
-/**
- * Creates a thenable mock that is also chainable.
- * Drizzle uses builder chains; awaiting any step in the chain resolves to `value`.
- */
-function mockChain(value: unknown) {
-  const p = Promise.resolve(value) as any;
-  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'values', 'set', 'returning'];
-  for (const m of methods) {
-    p[m] = vi.fn().mockReturnValue(p);
-  }
-  return p;
-}
-
-const makeTask = (overrides = {}) => ({
-  id: 1,
-  title: 'Test task',
-  description: null as string | null,
-  completed: false,
-  createdAt: new Date('2024-01-01'),
-  ...overrides,
-});
+import { mockChain } from '../test/mock-chain';
+import { makeTask } from '../test/make-task';
 
 describe('TasksService Unit Tests', () => {
   let service: TasksService;
