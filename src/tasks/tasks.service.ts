@@ -122,6 +122,20 @@ export class TasksService {
     return task;
   }
 
+  async getStats() {
+    const allTasks = await db.select().from(tasks);
+
+    const total = allTasks.length;
+    const completed = allTasks.filter((t) => t.completed).length;
+    const byPriority = {
+      High: allTasks.filter((t) => t.priority === 'High').length,
+      Medium: allTasks.filter((t) => t.priority === 'Medium').length,
+      Low: allTasks.filter((t) => t.priority === 'Low').length,
+    };
+
+    return { total, completed, pending: total - completed, byPriority };
+  }
+
   async deleteTasksInBatch(dto: BulkDeleteDto) {
     const deletedTasks: (typeof tasks.$inferSelect)[] = [];
 
