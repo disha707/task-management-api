@@ -31,6 +31,7 @@ const makeTasks = (count: number): TaskData[] =>
     description: null,
     completed: false,
     createdAt: '2024-01-01T00:00:00.000Z',
+    priority: 'Medium' as const,
   }));
 
 describe('TaskList', () => {

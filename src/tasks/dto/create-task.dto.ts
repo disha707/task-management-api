@@ -1,4 +1,4 @@
-import { IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, Length, MaxLength } from 'class-validator';
 
 export class CreateTaskDto {
   @IsString()
@@ -9,4 +9,8 @@ export class CreateTaskDto {
   @IsString()
   @MaxLength(1000)
   description?: string;
+
+  @IsOptional()
+  @IsIn(['High', 'Medium', 'Low'])
+  priority?: 'High' | 'Medium' | 'Low';
 }

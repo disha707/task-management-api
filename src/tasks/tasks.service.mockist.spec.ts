@@ -104,6 +104,26 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
       expect(dataChain.offset).toHaveBeenCalledWith(0);
     });
+
+    it('calls db.select twice when priority filter is provided', async () => {
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 1 }]))
+        .mockReturnValueOnce(mockChain([makeTask({ priority: 'Low' })]));
+
+      await service.getTasks({ priority: 'Low' });
+
+      expect(db.select).toHaveBeenCalledTimes(2);
+    });
+
+    it('calls db.select twice when sortBy is priority', async () => {
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 2 }]))
+        .mockReturnValueOnce(mockChain([makeTask({ priority: 'High' }), makeTask({ id: 2, priority: 'Low' })]));
+
+      await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' });
+
+      expect(db.select).toHaveBeenCalledTimes(2);
+    });
   });
 
   // ─── getTaskById ──────────────────────────────────────────────────────────
@@ -155,6 +175,23 @@ describe('TasksService Unit Tests (Mockist)', () => {
       expect(db.update).not.toHaveBeenCalled();
       expect(db.delete).not.toHaveBeenCalled();
     });
+
+    it('calls db.insert once when priority is provided', async () => {
+      (db.insert as any).mockReturnValue(mockChain([makeTask({ priority: 'High' })]));
+
+      await service.createTask({ title: 'Urgent task', priority: 'High' });
+
+      expect(db.insert).toHaveBeenCalledTimes(1);
+      expect(db.select).not.toHaveBeenCalled();
+    });
+
+    it('calls db.insert once when priority is absent', async () => {
+      (db.insert as any).mockReturnValue(mockChain([makeTask()]));
+
+      await service.createTask({ title: 'No priority task' });
+
+      expect(db.insert).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── updateTask ───────────────────────────────────────────────────────────
@@ -177,6 +214,24 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
       await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException);
       expect(db.update).not.toHaveBeenCalled();
+    });
+
+    it('calls db.update once when priority is provided in the DTO', async () => {
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask());
+      (db.update as any).mockReturnValue(mockChain([makeTask({ priority: 'Low' })]));
+
+      await service.updateTask(1, { priority: 'Low' });
+
+      expect(db.update).toHaveBeenCalledTimes(1);
+    });
+
+    it('calls db.update once when priority is absent from the DTO', async () => {
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask({ priority: 'High' }));
+      (db.update as any).mockReturnValue(mockChain([makeTask({ title: 'Renamed', priority: 'High' })]));
+
+      await service.updateTask(1, { title: 'Renamed' });
+
+      expect(db.update).toHaveBeenCalledTimes(1);
     });
   });
 

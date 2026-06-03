@@ -1,5 +1,11 @@
 import type { TaskData } from '../types/task';
 
+const PRIORITY_CLASSES: Record<'High' | 'Medium' | 'Low', string> = {
+  High: 'bg-red-100 text-red-700',
+  Medium: 'bg-orange-100 text-orange-700',
+  Low: 'bg-blue-100 text-blue-700',
+};
+
 interface TaskProps {
   task: TaskData;
   onToggle: (id: number) => void;
@@ -31,6 +37,9 @@ export function Task({ task, onToggle, onDelete }: TaskProps) {
             }`}
           >
             {task.completed ? 'Completed' : 'Incomplete'}
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${PRIORITY_CLASSES[task.priority]}`}>
+            {task.priority}
           </span>
         </div>
 

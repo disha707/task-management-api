@@ -4,4 +4,5 @@ export interface TaskData {
   description: string | null;
   completed: boolean;
   createdAt: string;
+  priority: 'High' | 'Medium' | 'Low';
 }

@@ -32,6 +32,7 @@ const baseTask: TaskData = {
   description: 'Use React Testing Library',
   completed: false,
   createdAt: '2024-01-01T00:00:00.000Z',
+  priority: 'Medium',
 };
 
 describe('Task', () => {
@@ -85,5 +86,42 @@ describe('Task', () => {
 
     expect(onDelete).toHaveBeenCalledOnce();
     expect(onDelete).toHaveBeenCalledWith(1);
+  });
+
+  // ─── Priority badge ───────────────────────────────────────────────────────
+
+  it('renders a badge with text "High" and red color classes when priority is High', () => {
+    const task: TaskData = { ...baseTask, priority: 'High' };
+    render(<Task task={task} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    const badge = screen.getByText('High');
+    expect(badge.className).toContain('bg-red-100');
+    expect(badge.className).toContain('text-red-700');
+  });
+
+  it('renders a badge with text "Medium" and orange color classes when priority is Medium', () => {
+    render(<Task task={baseTask} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    const badge = screen.getByText('Medium');
+    expect(badge.className).toContain('bg-orange-100');
+    expect(badge.className).toContain('text-orange-700');
+  });
+
+  it('renders a badge with text "Low" and blue color classes when priority is Low', () => {
+    const task: TaskData = { ...baseTask, priority: 'Low' };
+    render(<Task task={task} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    const badge = screen.getByText('Low');
+    expect(badge.className).toContain('bg-blue-100');
+    expect(badge.className).toContain('text-blue-700');
+  });
+
+  it('retains full color on the priority badge when the task is completed', () => {
+    const task: TaskData = { ...baseTask, priority: 'High', completed: true };
+    render(<Task task={task} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    const badge = screen.getByText('High');
+    expect(badge.className).toContain('bg-red-100');
+    expect(badge.className).toContain('text-red-700');
   });
 });

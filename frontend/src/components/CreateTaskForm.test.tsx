@@ -66,17 +66,17 @@ describe('CreateTaskForm', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it('calls onSubmit with trimmed title when input is valid', async () => {
+  it('calls onSubmit with trimmed title and default Medium priority when input is valid', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<CreateTaskForm onSubmit={onSubmit} />);
 
     await userEvent.type(screen.getByRole('textbox', { name: /title/i }), '  Buy groceries  ');
     await userEvent.click(screen.getByRole('button', { name: /add task/i }));
 
-    expect(onSubmit).toHaveBeenCalledWith('Buy groceries', undefined);
+    expect(onSubmit).toHaveBeenCalledWith('Buy groceries', undefined, 'Medium');
   });
 
-  it('calls onSubmit with description when both fields are filled', async () => {
+  it('calls onSubmit with description and default Medium priority when both fields are filled', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<CreateTaskForm onSubmit={onSubmit} />);
 
@@ -84,7 +84,7 @@ describe('CreateTaskForm', () => {
     await userEvent.type(screen.getByRole('textbox', { name: /description/i }), 'Milk and eggs');
     await userEvent.click(screen.getByRole('button', { name: /add task/i }));
 
-    expect(onSubmit).toHaveBeenCalledWith('Buy groceries', 'Milk and eggs');
+    expect(onSubmit).toHaveBeenCalledWith('Buy groceries', 'Milk and eggs', 'Medium');
   });
 
   it('clears both fields after successful submission', async () => {
@@ -98,6 +98,57 @@ describe('CreateTaskForm', () => {
     await waitFor(() => {
       expect(screen.getByRole('textbox', { name: /title/i })).toHaveValue('');
       expect(screen.getByRole('textbox', { name: /description/i })).toHaveValue('');
+    });
+  });
+
+  // ─── Priority select ──────────────────────────────────────────────────────
+
+  it('renders a Priority label and select control', () => {
+    render(<CreateTaskForm onSubmit={vi.fn()} />);
+
+    expect(screen.getByLabelText(/priority/i)).toBeInTheDocument();
+  });
+
+  it('has "Medium" selected by default in the priority select', () => {
+    render(<CreateTaskForm onSubmit={vi.fn()} />);
+
+    const select = screen.getByLabelText(/priority/i) as HTMLSelectElement;
+    expect(select.value).toBe('Medium');
+  });
+
+  it('calls onSubmit with "High" priority when High is selected before submit', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<CreateTaskForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /title/i }), 'Fix bug');
+    await userEvent.selectOptions(screen.getByLabelText(/priority/i), 'High');
+    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith('Fix bug', undefined, 'High');
+  });
+
+  it('calls onSubmit with "Low" priority when Low is selected before submit', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<CreateTaskForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /title/i }), 'Read book');
+    await userEvent.selectOptions(screen.getByLabelText(/priority/i), 'Low');
+    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+
+    expect(onSubmit).toHaveBeenCalledWith('Read book', undefined, 'Low');
+  });
+
+  it('resets the priority select back to "Medium" after a successful submit', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<CreateTaskForm onSubmit={onSubmit} />);
+
+    await userEvent.type(screen.getByRole('textbox', { name: /title/i }), 'Fix bug');
+    await userEvent.selectOptions(screen.getByLabelText(/priority/i), 'High');
+    await userEvent.click(screen.getByRole('button', { name: /add task/i }));
+
+    await waitFor(() => {
+      const select = screen.getByLabelText(/priority/i) as HTMLSelectElement;
+      expect(select.value).toBe('Medium');
     });
   });
 

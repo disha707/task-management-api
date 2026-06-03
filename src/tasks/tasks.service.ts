@@ -18,6 +18,7 @@ export class TasksService {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       completed,
+      priority,
     } = query;
 
     const conditions: SQL[] = [];
@@ -35,6 +36,10 @@ export class TasksService {
       conditions.push(eq(tasks.completed, completed));
     }
 
+    if (priority !== undefined) {
+      conditions.push(eq(tasks.priority, priority));
+    }
+
     const where = conditions.length ? and(...conditions) : undefined;
 
     const [{ total }] = await db
@@ -42,7 +47,12 @@ export class TasksService {
       .from(tasks)
       .where(where);
 
-    const sortColumn = sortBy === 'title' ? tasks.title : tasks.createdAt;
+    const sortColumn =
+      sortBy === 'title'
+        ? tasks.title
+        : sortBy === 'priority'
+          ? tasks.priority
+          : tasks.createdAt;
     const orderFn = sortOrder === 'asc' ? asc : desc;
 
     const data = await db
@@ -81,6 +91,7 @@ export class TasksService {
       .values({
         title: dto.title,
         description: dto.description,
+        priority: dto.priority,
       })
       .returning();
 
@@ -94,6 +105,7 @@ export class TasksService {
     if (dto.title !== undefined) updateData.title = dto.title;
     if (dto.description !== undefined) updateData.description = dto.description;
     if (dto.completed !== undefined) updateData.completed = dto.completed;
+    if (dto.priority !== undefined) updateData.priority = dto.priority;
 
     const [updatedTask] = await db
       .update(tasks)

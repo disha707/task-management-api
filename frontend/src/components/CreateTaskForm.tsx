@@ -1,12 +1,13 @@
 import { type FormEvent, useState } from 'react';
 
 interface CreateTaskFormProps {
-  onSubmit: (title: string, description?: string) => Promise<void>;
+  onSubmit: (title: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => Promise<void>;
 }
 
 export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState<'High' | 'Medium' | 'Low'>('Medium');
   const [validationError, setValidationError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -23,10 +24,10 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
     setIsSubmitting(true);
 
     try {
-      const trimmedDesc = description.trim() || undefined;
-      await onSubmit(trimmedTitle, trimmedDesc);
+      await onSubmit(trimmedTitle, description.trim() || undefined, priority);
       setTitle('');
       setDescription('');
+      setPriority('Medium');
     } finally {
       setIsSubmitting(false);
     }
@@ -67,6 +68,23 @@ export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
           rows={2}
           className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
+      </div>
+
+      <div className="mb-4">
+        <label htmlFor="task-priority" className="mb-1 block text-sm font-medium text-gray-700">
+          Priority
+        </label>
+        <select
+          id="task-priority"
+          aria-label="Priority"
+          value={priority}
+          onChange={(e) => setPriority(e.target.value as 'High' | 'Medium' | 'Low')}
+          className="w-full cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        >
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
       </div>
 
       <button

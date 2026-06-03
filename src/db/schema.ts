@@ -1,10 +1,13 @@
 import {
+  pgEnum,
   pgTable,
   serial,
   varchar,
   boolean,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+export const taskPriorityEnum = pgEnum('task_priority', ['High', 'Medium', 'Low']);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -30,5 +33,9 @@ export const tasks = pgTable('tasks', {
 
   createdAt: timestamp('created_at')
     .defaultNow()
+    .notNull(),
+
+  priority: taskPriorityEnum('priority')
+    .default('Medium')
     .notNull(),
 });

@@ -35,13 +35,28 @@
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  INestApplication,
+  NotFoundException,
+  ValidationPipe,
+} from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { inArray } from 'drizzle-orm';
+import request from 'supertest';
 
 import { db } from '../db/db';
 import { tasks } from '../db/schema';
 import { TasksService } from './tasks.service';
+import { TasksModule } from './tasks.module';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+class AlwaysAllowGuard implements CanActivate {
+  canActivate(_context: ExecutionContext) {
+    return true;
+  }
+}
 
 describe('TasksService Integration Tests', () => {
   let service: TasksService;
@@ -115,6 +130,33 @@ describe('TasksService Integration Tests', () => {
       const result = await service.getTasks({ search: 'drizzle search' });
 
       expect(result.data.some((t) => t.title.includes('drizzle search'))).toBe(true);
+    });
+
+    it('excludes non-matching tasks when search term is provided', async () => {
+      const prefix = `excl-search-${Date.now()}`;
+      await createTask(`${prefix} matching item`);
+      await createTask(`${prefix} irrelevant item`);
+
+      const result = await service.getTasks({ search: 'matching item', limit: 100 });
+
+      expect(result.data.every((t) => t.title.includes('matching item'))).toBe(true);
+    });
+
+    it('sorts by title ascending using tasks with different priorities', async () => {
+      const prefix = `titlesort-${Date.now()}`;
+      await createTask(`${prefix} Zebra`, { priority: 'Low' });
+      await createTask(`${prefix} Alpha`, { priority: 'High' });
+
+      const result = await service.getTasks({
+        sortBy: 'title',
+        sortOrder: 'asc',
+        search: prefix,
+        limit: 100,
+      });
+
+      const titles = result.data.map((t) => t.title);
+      expect(titles[0]).toContain('Alpha');
+      expect(titles[1]).toContain('Zebra');
     });
 
     it('filters by completed status', async () => {
@@ -286,6 +328,118 @@ describe('TasksService Integration Tests', () => {
       // t1 should still exist because transaction rolled back
       const stillExists = await service.getTaskById(t1.id);
       expect(stillExists.id).toBe(t1.id);
+    });
+  });
+
+  // ─── priority — createTask ────────────────────────────────────────────────
+
+  describe('priority — createTask', () => {
+    it('persists High priority and returns it on the row', async () => {
+      const task = await service.createTask({ title: 'High priority task', priority: 'High' });
+      createdIds.push(task.id);
+
+      expect(task.priority).toBe('High');
+
+      const fetched = await service.getTaskById(task.id);
+      expect(fetched.priority).toBe('High');
+    });
+
+    it('defaults to Medium priority when priority is omitted', async () => {
+      const task = await service.createTask({ title: 'Default priority task' });
+      createdIds.push(task.id);
+
+      expect(task.priority).toBe('Medium');
+
+      const fetched = await service.getTaskById(task.id);
+      expect(fetched.priority).toBe('Medium');
+    });
+  });
+
+  // ─── priority — getTasks ──────────────────────────────────────────────────
+
+  describe('priority — getTasks', () => {
+    it('returns only Low priority tasks when priority filter is Low', async () => {
+      await createTask('High task', { priority: 'High' });
+      await createTask('Medium task', { priority: 'Medium' });
+      await createTask('Low task', { priority: 'Low' });
+
+      const result = await service.getTasks({ priority: 'Low', limit: 100 });
+
+      expect(result.data.every((t) => t.priority === 'Low')).toBe(true);
+    });
+
+    it('returns rows in ascending priority order when sortBy is priority', async () => {
+      const prefix = 'priosort-unique-';
+      await createTask(`${prefix}high`, { priority: 'High' });
+      await createTask(`${prefix}low`, { priority: 'Low' });
+      await createTask(`${prefix}medium`, { priority: 'Medium' });
+
+      const result = await service.getTasks({
+        sortBy: 'priority',
+        sortOrder: 'asc',
+        search: prefix,
+        limit: 100,
+      });
+
+      const priorities = result.data.map((t) => t.priority);
+      const enumOrder = ['High', 'Medium', 'Low'] as const;
+      const byEnumOrder = (a: string, b: string) =>
+        enumOrder.indexOf(a as any) - enumOrder.indexOf(b as any);
+      const sorted = [...priorities].sort(byEnumOrder);
+      expect(priorities).toEqual(sorted);
+    });
+  });
+
+  // ─── priority — updateTask ────────────────────────────────────────────────
+
+  describe('priority — updateTask', () => {
+    it('changes stored priority to Low when updated', async () => {
+      const task = await createTask('Initially High', { priority: 'High' });
+
+      const updated = await service.updateTask(task.id, { priority: 'Low' });
+
+      expect(updated.priority).toBe('Low');
+
+      const fetched = await service.getTaskById(task.id);
+      expect(fetched.priority).toBe('Low');
+    });
+
+    it('leaves existing priority unchanged when priority is absent from the DTO', async () => {
+      const task = await createTask('Keep my priority', { priority: 'High' });
+
+      const updated = await service.updateTask(task.id, { title: 'Renamed task' });
+
+      expect(updated.priority).toBe('High');
+    });
+  });
+
+  // ─── priority — ValidationPipe (HTTP layer) ───────────────────────────────
+
+  describe('priority — validation', () => {
+    let app: INestApplication;
+
+    beforeEach(async () => {
+      const module: TestingModule = await Test.createTestingModule({
+        imports: [TasksModule],
+      })
+        .overrideGuard(JwtAuthGuard)
+        .useClass(AlwaysAllowGuard)
+        .compile();
+
+      app = module.createNestApplication();
+      app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+      await app.init();
+    });
+
+    afterEach(async () => {
+      await app.close();
+    });
+
+    it('returns 400 when priority is an invalid value', async () => {
+      await request(app.getHttpServer())
+        .post('/tasks')
+        .send({ title: 'Any task', priority: 'Critical' })
+        .expect(400);
     });
   });
 });

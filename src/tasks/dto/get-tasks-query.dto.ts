@@ -20,8 +20,8 @@ export class GetTasksQueryDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['title', 'createdAt'])
-  sortBy?: 'title' | 'createdAt' = 'createdAt';
+  @IsIn(['title', 'createdAt', 'priority'])
+  sortBy?: 'title' | 'createdAt' | 'priority' = 'createdAt';
 
   @IsOptional()
   @IsIn(['asc', 'desc'])
@@ -33,4 +33,8 @@ export class GetTasksQueryDto {
   )
   @IsBoolean()
   completed?: boolean;
+
+  @IsOptional()
+  @IsIn(['High', 'Medium', 'Low'])
+  priority?: 'High' | 'Medium' | 'Low';
 }

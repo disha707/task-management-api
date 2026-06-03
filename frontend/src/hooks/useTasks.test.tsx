@@ -137,4 +137,112 @@ describe('useTasks', () => {
     expect(result.current.tasks.length).toBe(beforeCount + 1);
     expect(result.current.tasks[0].title).toBe('Brand new task');
   });
+
+  // ─── createTask — priority in POST body ───────────────────────────────────
+
+  it('includes priority in the POST body when priority is provided', async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post(API, async ({ request }) => {
+        capturedBody = await request.json() as Record<string, unknown>;
+        return HttpResponse.json(
+          { id: 99, title: 'Buy milk', description: null, completed: false, createdAt: new Date().toISOString(), priority: 'High' },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const { result } = renderHook(() => useTasks());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.createTask('Buy milk', undefined, 'High');
+    });
+
+    expect(capturedBody).not.toBeNull();
+    expect(capturedBody!.priority).toBe('High');
+  });
+
+  it('omits priority from the POST body when priority is not provided', async () => {
+    let capturedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post(API, async ({ request }) => {
+        capturedBody = await request.json() as Record<string, unknown>;
+        return HttpResponse.json(
+          { id: 99, title: 'Buy milk', description: null, completed: false, createdAt: new Date().toISOString(), priority: 'Medium' },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const { result } = renderHook(() => useTasks());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await act(async () => {
+      await result.current.createTask('Buy milk');
+    });
+
+    expect(capturedBody).not.toBeNull();
+    expect(Object.prototype.hasOwnProperty.call(capturedBody, 'priority')).toBe(false);
+  });
+
+  // ─── priority filter — GET URL ────────────────────────────────────────────
+
+  it('appends ?priority=Low to the GET request when priority filter is Low', async () => {
+    let capturedUrl: string | null = null;
+    server.use(
+      http.get(API, ({ request }) => {
+        capturedUrl = request.url;
+        return HttpResponse.json({
+          data: defaultTasks,
+          meta: { page: 1, limit: 10, total: 2, totalPages: 1 },
+        });
+      }),
+    );
+
+    const { result } = renderHook(() => useTasks('Low'));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(capturedUrl).not.toBeNull();
+    expect(new URL(capturedUrl!).searchParams.get('priority')).toBe('Low');
+  });
+
+  it('sets isLoading to true while re-fetching after a filter change', async () => {
+    const { result, rerender } = renderHook(
+      ({ priority }: { priority: 'High' | 'Medium' | 'Low' | undefined }) => useTasks(priority),
+      { initialProps: { priority: undefined } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    rerender({ priority: 'Low' });
+
+    expect(result.current.isLoading).toBe(true);
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+  });
+
+  it('re-fetches with ?priority=High when filter changes from Low to High', async () => {
+    const capturedUrls: string[] = [];
+    server.use(
+      http.get(API, ({ request }) => {
+        capturedUrls.push(request.url);
+        return HttpResponse.json({
+          data: defaultTasks,
+          meta: { page: 1, limit: 10, total: 2, totalPages: 1 },
+        });
+      }),
+    );
+
+    const { result, rerender } = renderHook(
+      ({ priority }: { priority: 'High' | 'Medium' | 'Low' | undefined }) => useTasks(priority),
+      { initialProps: { priority: 'Low' as const } },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    rerender({ priority: 'High' });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const lastUrl = capturedUrls[capturedUrls.length - 1];
+    expect(new URL(lastUrl).searchParams.get('priority')).toBe('High');
+  });
 });

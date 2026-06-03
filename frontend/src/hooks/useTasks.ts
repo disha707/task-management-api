@@ -11,13 +11,15 @@ function authHeaders(): HeadersInit {
     : { 'Content-Type': 'application/json' };
 }
 
-export function useTasks() {
+export function useTasks(priority?: 'High' | 'Medium' | 'Low') {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(API, { headers: authHeaders() })
+    const url = priority ? `${API}?priority=${priority}` : API;
+    setIsLoading(true);
+    fetch(url, { headers: authHeaders() })
       .then((res) => {
         if (!res.ok) throw new Error('Failed to fetch tasks');
         return res.json();
@@ -25,7 +27,7 @@ export function useTasks() {
       .then((body: { data: TaskData[] }) => setTasks(body.data))
       .catch((err: Error) => setError(err.message))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [priority]);
 
   const toggle = useCallback(async (id: number) => {
     const task = tasks.find((t) => t.id === id);
@@ -62,11 +64,17 @@ export function useTasks() {
     }
   }, [tasks]);
 
-  const createTask = useCallback(async (title: string, description?: string) => {
+  const createTask = useCallback(async (
+    title: string,
+    description?: string,
+    priority?: 'High' | 'Medium' | 'Low',
+  ) => {
+    const body: Record<string, unknown> = { title, description };
+    if (priority !== undefined) body.priority = priority;
     const res = await fetch(API, {
       method: 'POST',
       headers: authHeaders(),
-      body: JSON.stringify({ title, description }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('Failed to create task');
     const created: TaskData = await res.json();

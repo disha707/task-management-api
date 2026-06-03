@@ -8,5 +8,6 @@ export const makeTask = (overrides = {}) => ({
   description: null as string | null,
   completed: false,
   createdAt: new Date('2024-01-01'),
+  priority: 'Medium' as 'High' | 'Medium' | 'Low',
   ...overrides,
 });

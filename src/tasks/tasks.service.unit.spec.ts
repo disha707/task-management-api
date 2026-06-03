@@ -97,6 +97,42 @@ describe('TasksService Unit Tests', () => {
       expect(result.data[0].completed).toBe(true);
     });
 
+    it('returns only matching tasks when priority filter is provided', async () => {
+      const lowTask = makeTask({ priority: 'Low' });
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 1 }]))
+        .mockReturnValueOnce(mockChain([lowTask]));
+
+      const result = await service.getTasks({ priority: 'Low' });
+
+      expect(result.data).toHaveLength(1);
+      expect(result.data[0].priority).toBe('Low');
+    });
+
+    it('returns all tasks when no priority filter is provided', async () => {
+      const tasks = [makeTask({ priority: 'High' }), makeTask({ id: 2, priority: 'Low' })];
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 2 }]))
+        .mockReturnValueOnce(mockChain(tasks));
+
+      const result = await service.getTasks({});
+
+      expect(result.data).toHaveLength(2);
+    });
+
+    it('sorts by priority column when sortBy is priority', async () => {
+      const highTask = makeTask({ priority: 'High' });
+      const lowTask = makeTask({ id: 2, priority: 'Low' });
+      (db.select as any)
+        .mockReturnValueOnce(mockChain([{ total: 2 }]))
+        .mockReturnValueOnce(mockChain([highTask, lowTask]));
+
+      const result = await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' });
+
+      expect(result.data[0].priority).toBe('High');
+      expect(result.data[1].priority).toBe('Low');
+    });
+
     it('applies pagination offset for page 2', async () => {
       const dataChain = mockChain([]);
       (db.select as any)
@@ -152,6 +188,25 @@ describe('TasksService Unit Tests', () => {
 
       expect(result.description).toBe('Some info');
     });
+
+    it('stores the given priority when priority is provided', async () => {
+      const newTask = makeTask({ title: 'Urgent', priority: 'High' });
+      (db.insert as any).mockReturnValue(mockChain([newTask]));
+
+      const result = await service.createTask({ title: 'Urgent', priority: 'High' });
+
+      expect(result.priority).toBe('High');
+    });
+
+    it('inserts and returns the task when priority is absent', async () => {
+      const newTask = makeTask({ title: 'Default priority task' });
+      (db.insert as any).mockReturnValue(mockChain([newTask]));
+
+      const result = await service.createTask({ title: 'Default priority task' });
+
+      expect(result).toEqual(newTask);
+      expect(db.insert).toHaveBeenCalledTimes(1);
+    });
   });
 
   // ─── updateTask ───────────────────────────────────────────────────────────
@@ -191,6 +246,30 @@ describe('TasksService Unit Tests', () => {
       const result = await service.updateTask(1, { description: 'Updated desc' });
 
       expect(result.description).toBe('Updated desc');
+    });
+
+    it('updates priority when priority is provided', async () => {
+      const existing = makeTask();
+      const updated = makeTask({ priority: 'Low' });
+
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing);
+      (db.update as any).mockReturnValue(mockChain([updated]));
+
+      const result = await service.updateTask(1, { priority: 'Low' });
+
+      expect(result.priority).toBe('Low');
+    });
+
+    it('leaves priority unchanged when priority is absent from the DTO', async () => {
+      const existing = makeTask({ priority: 'High' });
+      const updated = makeTask({ title: 'New title', priority: 'High' });
+
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing);
+      (db.update as any).mockReturnValue(mockChain([updated]));
+
+      const result = await service.updateTask(1, { title: 'New title' });
+
+      expect(result.priority).toBe('High');
     });
 
     it('throws NotFoundException when task does not exist', async () => {

@@ -6,8 +6,8 @@ export const AUTH_API = 'http://localhost:3000/auth';
 export const FAKE_TOKEN = 'test.jwt.token';
 
 export const defaultTasks: TaskData[] = [
-  { id: 1, title: 'First task', description: null, completed: false, createdAt: '2024-01-01T00:00:00.000Z' },
-  { id: 2, title: 'Second task', description: 'Some details', completed: true, createdAt: '2024-01-02T00:00:00.000Z' },
+  { id: 1, title: 'First task', description: null, completed: false, createdAt: '2024-01-01T00:00:00.000Z', priority: 'Medium' },
+  { id: 2, title: 'Second task', description: 'Some details', completed: true, createdAt: '2024-01-02T00:00:00.000Z', priority: 'Medium' },
 ];
 
 export const handlers = [
@@ -39,13 +39,14 @@ export const handlers = [
   ),
 
   http.post(API, async ({ request }) => {
-    const body = await request.json() as { title: string; description?: string };
+    const body = await request.json() as { title: string; description?: string; priority?: 'High' | 'Medium' | 'Low' };
     const created: TaskData = {
       id: 99,
       title: body.title,
       description: body.description ?? null,
       completed: false,
       createdAt: new Date().toISOString(),
+      priority: body.priority ?? 'Medium',
     };
     return HttpResponse.json(created, { status: 201 });
   }),
