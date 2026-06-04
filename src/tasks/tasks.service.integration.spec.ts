@@ -42,6 +42,7 @@ import {
   NotFoundException,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { inArray } from 'drizzle-orm';
 import request from 'supertest';
@@ -420,7 +421,7 @@ describe('TasksService Integration Tests', () => {
 
     beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
-        imports: [TasksModule],
+        imports: [ConfigModule.forRoot({ isGlobal: true }), TasksModule],
       })
         .overrideGuard(JwtAuthGuard)
         .useClass(AlwaysAllowGuard)
