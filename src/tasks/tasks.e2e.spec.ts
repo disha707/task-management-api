@@ -100,6 +100,62 @@ describe('Tasks E2E', () => {
     });
   });
 
+  // ─── DELETE /tasks/bulk ───────────────────────────────────────────────────
+
+  describe('DELETE /tasks/bulk', () => {
+    it('returns 401 without auth token', async () => {
+      const res = await request(app.getHttpServer())
+        .delete('/tasks/bulk')
+        .send({ ids: [1] });
+      expect(res.status).toBe(401);
+    });
+
+    it('deletes multiple tasks and returns them → 200', async () => {
+      const t1 = await request(app.getHttpServer())
+        .post('/tasks')
+        .set(authHeader())
+        .send({ title: 'Bulk delete task 1' });
+      const t2 = await request(app.getHttpServer())
+        .post('/tasks')
+        .set(authHeader())
+        .send({ title: 'Bulk delete task 2' });
+
+      const res = await request(app.getHttpServer())
+        .delete('/tasks/bulk')
+        .set(authHeader())
+        .send({ ids: [t1.body.id, t2.body.id] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(2);
+      expect(res.body.map((t: { id: number }) => t.id).sort()).toEqual(
+        [t1.body.id, t2.body.id].sort(),
+      );
+    });
+
+    it('returns 404 when one id in the batch does not exist', async () => {
+      const t = await request(app.getHttpServer())
+        .post('/tasks')
+        .set(authHeader())
+        .send({ title: 'Batch partial task' });
+      createdTaskIds.push(t.body.id);
+
+      const res = await request(app.getHttpServer())
+        .delete('/tasks/bulk')
+        .set(authHeader())
+        .send({ ids: [t.body.id, 99999999] });
+
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 400 when ids array is empty', async () => {
+      const res = await request(app.getHttpServer())
+        .delete('/tasks/bulk')
+        .set(authHeader())
+        .send({ ids: [] });
+      expect(res.status).toBe(400);
+    });
+  });
+
   // ─── Unauthenticated — guard blocks all task routes ───────────────────────
 
   describe('JWT guard: requests without Authorization header', () => {
