@@ -22,7 +22,10 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+# Migration SQL files must be present at runtime so dist/db/migrate.js can apply them
+COPY drizzle ./drizzle
 
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+# Run pending migrations before starting the server
+CMD ["sh", "-c", "node dist/db/migrate.js && node dist/main"]
