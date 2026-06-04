@@ -16,7 +16,9 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest run --coverage",
-    "test:mutation": "stryker run"
+    "test:mutation": "stryker run",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
