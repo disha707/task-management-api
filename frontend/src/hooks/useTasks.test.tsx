@@ -140,6 +140,32 @@ describe('useTasks', () => {
 
   // ─── createTask — priority in POST body ───────────────────────────────────
 
+  it('toggle() does nothing when the task id is not in the list', async () => {
+    const { result } = renderHook(() => useTasks());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const snapshot = result.current.tasks;
+
+    await act(async () => {
+      await result.current.toggle(9999);
+    });
+
+    expect(result.current.tasks).toEqual(snapshot);
+  });
+
+  it('createTask() throws when the POST request fails', async () => {
+    server.use(
+      http.post(API, () => HttpResponse.json({ message: 'Server error' }, { status: 500 })),
+    );
+
+    const { result } = renderHook(() => useTasks());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    await expect(
+      act(async () => { await result.current.createTask('Will fail'); }),
+    ).rejects.toThrow('Failed to create task');
+  });
+
   it('includes priority in the POST body when priority is provided', async () => {
     let capturedBody: Record<string, unknown> | null = null;
     server.use(

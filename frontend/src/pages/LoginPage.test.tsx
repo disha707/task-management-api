@@ -85,6 +85,22 @@ describe('LoginPage', () => {
     });
   });
 
+  it('shows "Login failed" fallback when server returns error with empty message', async () => {
+    server.use(
+      http.post(`${AUTH_API}/login`, () =>
+        HttpResponse.json({ message: '' }, { status: 401 }),
+      ),
+    );
+    renderLoginPage();
+
+    await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com');
+    await userEvent.type(screen.getByLabelText(/password/i), 'wrongpassword');
+    await userEvent.click(screen.getByRole('button', { name: /sign in/i }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Login failed');
+  });
+
   it('has a link to the register page', () => {
     renderLoginPage();
 

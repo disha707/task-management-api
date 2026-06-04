@@ -115,6 +115,48 @@ describe('AuthContext', () => {
     expect(result.current.token).toBe(FAKE_TOKEN);
   });
 
+  it('login() uses "Login failed" fallback when error response has no message field', async () => {
+    server.use(
+      http.post(`${AUTH_API}/login`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await expect(
+      act(async () => { await result.current.login('x@x.com', 'pass'); }),
+    ).rejects.toThrow('Login failed');
+
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('register() uses "Registration failed" fallback when error response has no message field', async () => {
+    server.use(
+      http.post(`${AUTH_API}/register`, () =>
+        HttpResponse.json({}, { status: 400 }),
+      ),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await expect(
+      act(async () => { await result.current.register('x@x.com', 'pass123'); }),
+    ).rejects.toThrow('Registration failed');
+
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
+  it('login() throws via default handler when password is "wrong"', async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await expect(
+      act(async () => { await result.current.login('user@example.com', 'wrong'); }),
+    ).rejects.toThrow();
+
+    expect(result.current.isAuthenticated).toBe(false);
+  });
+
   it('useAuth throws when used outside AuthProvider', () => {
     // Suppress React's error boundary output in test logs
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});

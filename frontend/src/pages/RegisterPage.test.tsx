@@ -90,6 +90,17 @@ describe('RegisterPage', () => {
     });
   });
 
+  it('shows an error when password is fewer than 8 characters', async () => {
+    renderRegisterPage();
+
+    await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'user@example.com');
+    await userEvent.type(screen.getByLabelText(/^password/i), 'abc123'); // 6 chars
+    await userEvent.type(screen.getByLabelText(/confirm password/i), 'abc123');
+    await userEvent.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/at least 8 characters/i);
+  });
+
   it('has a link back to the login page', () => {
     renderRegisterPage();
 
