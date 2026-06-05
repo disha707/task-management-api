@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTasks } from '../hooks/useTasks';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import { CreateTaskForm } from '../components/CreateTaskForm';
 import { TaskList } from '../components/TaskList';
 

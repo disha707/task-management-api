@@ -45,7 +45,9 @@ describe('Auth E2E', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
   });
 
@@ -71,9 +73,10 @@ describe('Auth E2E', () => {
         .post('/auth/register')
         .send({ email, password: 'securepass' });
 
+      const body = res.body as { access_token: string };
       expect(res.status).toBe(201);
-      expect(res.body).toHaveProperty('access_token');
-      expect(typeof res.body.access_token).toBe('string');
+      expect(body).toHaveProperty('access_token');
+      expect(typeof body.access_token).toBe('string');
     });
 
     it('returns 400 when email format is invalid', async () => {
@@ -126,9 +129,10 @@ describe('Auth E2E', () => {
         .post('/auth/login')
         .send({ email: loginEmail, password: 'securepass' });
 
+      const body = res.body as { access_token: string };
       expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('access_token');
-      expect(typeof res.body.access_token).toBe('string');
+      expect(body).toHaveProperty('access_token');
+      expect(typeof body.access_token).toBe('string');
     });
 
     it('returns 401 when password is wrong', async () => {

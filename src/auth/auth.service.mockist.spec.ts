@@ -89,10 +89,15 @@ describe('AuthService Unit Tests (Mockist)', () => {
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      await service.register({ email: 'alice@example.com', password: 'password123' });
+      await service.register({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(mockUsersService.findByEmail).toHaveBeenCalledOnce();
-      expect(mockUsersService.findByEmail).toHaveBeenCalledWith('alice@example.com');
+      expect(mockUsersService.findByEmail).toHaveBeenCalledWith(
+        'alice@example.com',
+      );
     });
 
     it('calls bcrypt.hash with (password, 10)', async () => {
@@ -101,7 +106,10 @@ describe('AuthService Unit Tests (Mockist)', () => {
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      await service.register({ email: 'alice@example.com', password: 'password123' });
+      await service.register({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(bcrypt.hash).toHaveBeenCalledOnce();
       expect(bcrypt.hash).toHaveBeenCalledWith('password123', 10);
@@ -113,10 +121,16 @@ describe('AuthService Unit Tests (Mockist)', () => {
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      await service.register({ email: 'alice@example.com', password: 'password123' });
+      await service.register({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(mockUsersService.create).toHaveBeenCalledOnce();
-      expect(mockUsersService.create).toHaveBeenCalledWith('alice@example.com', 'hashed-pw');
+      expect(mockUsersService.create).toHaveBeenCalledWith(
+        'alice@example.com',
+        'hashed-pw',
+      );
     });
 
     it('calls jwtService.sign with { sub, email } and returns the token', async () => {
@@ -125,10 +139,16 @@ describe('AuthService Unit Tests (Mockist)', () => {
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      const result = await service.register({ email: 'alice@example.com', password: 'password123' });
+      const result = await service.register({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(mockJwtService.sign).toHaveBeenCalledOnce();
-      expect(mockJwtService.sign).toHaveBeenCalledWith({ sub: storedUser.id, email: storedUser.email });
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        sub: storedUser.id,
+        email: storedUser.email,
+      });
       expect(result).toEqual({ access_token: 'signed-token' });
     });
 
@@ -136,7 +156,10 @@ describe('AuthService Unit Tests (Mockist)', () => {
       mockUsersService.findByEmail.mockResolvedValue(storedUser);
 
       await expect(
-        service.register({ email: 'alice@example.com', password: 'password123' }),
+        service.register({
+          email: 'alice@example.com',
+          password: 'password123',
+        }),
       ).rejects.toThrow(ConflictException);
 
       expect(bcrypt.hash).not.toHaveBeenCalled();
@@ -153,10 +176,15 @@ describe('AuthService Unit Tests (Mockist)', () => {
       vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      await service.login({ email: 'alice@example.com', password: 'password123' });
+      await service.login({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(mockUsersService.findByEmail).toHaveBeenCalledOnce();
-      expect(mockUsersService.findByEmail).toHaveBeenCalledWith('alice@example.com');
+      expect(mockUsersService.findByEmail).toHaveBeenCalledWith(
+        'alice@example.com',
+      );
     });
 
     it('calls bcrypt.compare with (password, passwordHash)', async () => {
@@ -164,10 +192,16 @@ describe('AuthService Unit Tests (Mockist)', () => {
       vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      await service.login({ email: 'alice@example.com', password: 'password123' });
+      await service.login({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(bcrypt.compare).toHaveBeenCalledOnce();
-      expect(bcrypt.compare).toHaveBeenCalledWith('password123', storedUser.passwordHash);
+      expect(bcrypt.compare).toHaveBeenCalledWith(
+        'password123',
+        storedUser.passwordHash,
+      );
     });
 
     it('calls jwtService.sign and returns the token on valid credentials', async () => {
@@ -175,10 +209,16 @@ describe('AuthService Unit Tests (Mockist)', () => {
       vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
-      const result = await service.login({ email: 'alice@example.com', password: 'password123' });
+      const result = await service.login({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(mockJwtService.sign).toHaveBeenCalledOnce();
-      expect(mockJwtService.sign).toHaveBeenCalledWith({ sub: storedUser.id, email: storedUser.email });
+      expect(mockJwtService.sign).toHaveBeenCalledWith({
+        sub: storedUser.id,
+        email: storedUser.email,
+      });
       expect(result).toEqual({ access_token: 'signed-token' });
     });
 
@@ -198,7 +238,10 @@ describe('AuthService Unit Tests (Mockist)', () => {
       vi.mocked(bcrypt.compare).mockResolvedValue(false);
 
       await expect(
-        service.login({ email: 'alice@example.com', password: 'wrong-password' }),
+        service.login({
+          email: 'alice@example.com',
+          password: 'wrong-password',
+        }),
       ).rejects.toThrow(UnauthorizedException);
 
       expect(mockJwtService.sign).not.toHaveBeenCalled();

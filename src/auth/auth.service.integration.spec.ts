@@ -74,7 +74,9 @@ describe('AuthService Integration Tests', () => {
       const result = await service.register({ email, password: 'securepass' });
 
       expect(result).toHaveProperty('access_token');
-      const payload = jwtService.verify<{ email: string; sub: number }>(result.access_token);
+      const payload = jwtService.verify<{ email: string; sub: number }>(
+        result.access_token,
+      );
       expect(payload.email).toBe(email);
       expect(typeof payload.sub).toBe('number');
     });
@@ -99,7 +101,9 @@ describe('AuthService Integration Tests', () => {
       const result = await service.login({ email, password: 'securepass' });
 
       expect(result).toHaveProperty('access_token');
-      const payload = jwtService.verify<{ email: string; sub: number }>(result.access_token);
+      const payload = jwtService.verify<{ email: string; sub: number }>(
+        result.access_token,
+      );
       expect(payload.email).toBe(email);
     });
 
