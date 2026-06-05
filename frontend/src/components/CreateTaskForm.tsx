@@ -1,7 +1,7 @@
 import { type FormEvent, useState } from 'react';
 
 interface CreateTaskFormProps {
-  onSubmit: (title: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => Promise<void>;
+  onSubmit: (title: string, description?: string, priority?: 'High' | 'Medium' | 'Low') => Promise<unknown>;
 }
 
 export function CreateTaskForm({ onSubmit }: CreateTaskFormProps) {
