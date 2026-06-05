@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TaskData } from '../types/task';
 
-const API = 'http://localhost:3000/tasks';
+const API = `${import.meta.env.VITE_API_URL}/tasks`;
 const TOKEN_KEY = 'auth_token';
 
 function authHeaders(): HeadersInit {

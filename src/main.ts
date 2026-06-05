@@ -6,7 +6,9 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.enableCors({ origin: 'http://localhost:5173' });
+  // FRONTEND_URL accepts a comma-separated list: "https://app.vercel.app,http://localhost:5173"
+  const allowedOrigins = (process.env.FRONTEND_URL ?? 'http://localhost:5173').split(',');
+  app.enableCors({ origin: allowedOrigins });
 
   app.useGlobalPipes(
     new ValidationPipe({
