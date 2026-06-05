@@ -85,7 +85,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
   describe('register', () => {
     it('calls usersService.findByEmail with the provided email', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
-      (bcrypt.hash as any).mockResolvedValue('hashed-pw');
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed-pw');
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
@@ -97,7 +97,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('calls bcrypt.hash with (password, 10)', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
-      (bcrypt.hash as any).mockResolvedValue('hashed-pw');
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed-pw');
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
@@ -109,7 +109,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('calls usersService.create with (email, hashedPassword)', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
-      (bcrypt.hash as any).mockResolvedValue('hashed-pw');
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed-pw');
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
@@ -121,7 +121,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('calls jwtService.sign with { sub, email } and returns the token', async () => {
       mockUsersService.findByEmail.mockResolvedValue(null);
-      (bcrypt.hash as any).mockResolvedValue('hashed-pw');
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed-pw');
       mockUsersService.create.mockResolvedValue(storedUser);
       mockJwtService.sign.mockReturnValue('signed-token');
 
@@ -150,7 +150,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
   describe('login', () => {
     it('calls usersService.findByEmail with the provided email', async () => {
       mockUsersService.findByEmail.mockResolvedValue(storedUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
       await service.login({ email: 'alice@example.com', password: 'password123' });
@@ -161,7 +161,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('calls bcrypt.compare with (password, passwordHash)', async () => {
       mockUsersService.findByEmail.mockResolvedValue(storedUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
       await service.login({ email: 'alice@example.com', password: 'password123' });
@@ -172,7 +172,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('calls jwtService.sign and returns the token on valid credentials', async () => {
       mockUsersService.findByEmail.mockResolvedValue(storedUser);
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(bcrypt.compare).mockResolvedValue(true);
       mockJwtService.sign.mockReturnValue('signed-token');
 
       const result = await service.login({ email: 'alice@example.com', password: 'password123' });
@@ -195,7 +195,7 @@ describe('AuthService Unit Tests (Mockist)', () => {
 
     it('throws UnauthorizedException without calling jwtService.sign when password is wrong', async () => {
       mockUsersService.findByEmail.mockResolvedValue(storedUser);
-      (bcrypt.compare as any).mockResolvedValue(false);
+      vi.mocked(bcrypt.compare).mockResolvedValue(false);
 
       await expect(
         service.login({ email: 'alice@example.com', password: 'wrong-password' }),
