@@ -18,6 +18,7 @@ export function useTasks(priority?: 'High' | 'Medium' | 'Low') {
 
   useEffect(() => {
     const url = priority ? `${API}?priority=${priority}` : API;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoading(true);
     fetch(url, { headers: authHeaders() })
       .then((res) => {
