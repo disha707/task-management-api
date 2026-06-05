@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useState, type ReactNode } from 'react';
 
 const AUTH_API = `${import.meta.env.VITE_API_URL}/auth`;
 const TOKEN_KEY = 'auth_token';

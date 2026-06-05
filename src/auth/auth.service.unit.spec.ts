@@ -56,7 +56,10 @@ describe('AuthService Unit Tests (Classical)', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        JwtModule.register({ secret: 'test-secret', signOptions: { expiresIn: '1h' } }),
+        JwtModule.register({
+          secret: 'test-secret',
+          signOptions: { expiresIn: '1h' },
+        }),
       ],
       providers: [AuthService, UsersService],
     }).compile();
@@ -68,11 +71,14 @@ describe('AuthService Unit Tests (Classical)', () => {
 
   describe('register', () => {
     it('hashes the password and returns an access_token', async () => {
-      (db.select as any).mockReturnValue(mockChain([])); // email not taken
-      (bcrypt.hash as any).mockResolvedValue('hashed-pw');
-      (db.insert as any).mockReturnValue(mockChain([existingUser]));
+      vi.mocked(db.select).mockReturnValue(mockChain([])); // email not taken
+      vi.mocked(bcrypt.hash).mockResolvedValue('hashed-pw');
+      vi.mocked(db.insert).mockReturnValue(mockChain([existingUser]));
 
-      const result = await service.register({ email: 'alice@example.com', password: 'password123' });
+      const result = await service.register({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(result).toHaveProperty('access_token');
       expect(typeof result.access_token).toBe('string');
@@ -80,10 +86,13 @@ describe('AuthService Unit Tests (Classical)', () => {
     });
 
     it('throws ConflictException when email is already registered', async () => {
-      (db.select as any).mockReturnValue(mockChain([existingUser]));
+      vi.mocked(db.select).mockReturnValue(mockChain([existingUser]));
 
       await expect(
-        service.register({ email: 'alice@example.com', password: 'password123' }),
+        service.register({
+          email: 'alice@example.com',
+          password: 'password123',
+        }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -92,17 +101,20 @@ describe('AuthService Unit Tests (Classical)', () => {
 
   describe('login', () => {
     it('returns an access_token for valid credentials', async () => {
-      (db.select as any).mockReturnValue(mockChain([existingUser]));
-      (bcrypt.compare as any).mockResolvedValue(true);
+      vi.mocked(db.select).mockReturnValue(mockChain([existingUser]));
+      vi.mocked(bcrypt.compare).mockResolvedValue(true);
 
-      const result = await service.login({ email: 'alice@example.com', password: 'password123' });
+      const result = await service.login({
+        email: 'alice@example.com',
+        password: 'password123',
+      });
 
       expect(result).toHaveProperty('access_token');
       expect(typeof result.access_token).toBe('string');
     });
 
     it('throws UnauthorizedException for an unknown email', async () => {
-      (db.select as any).mockReturnValue(mockChain([]));
+      vi.mocked(db.select).mockReturnValue(mockChain([]));
 
       await expect(
         service.login({ email: 'nobody@example.com', password: 'password123' }),
@@ -110,11 +122,14 @@ describe('AuthService Unit Tests (Classical)', () => {
     });
 
     it('throws UnauthorizedException for a wrong password', async () => {
-      (db.select as any).mockReturnValue(mockChain([existingUser]));
-      (bcrypt.compare as any).mockResolvedValue(false);
+      vi.mocked(db.select).mockReturnValue(mockChain([existingUser]));
+      vi.mocked(bcrypt.compare).mockResolvedValue(false);
 
       await expect(
-        service.login({ email: 'alice@example.com', password: 'wrong-password' }),
+        service.login({
+          email: 'alice@example.com',
+          password: 'wrong-password',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
   });
