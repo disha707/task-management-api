@@ -1,0 +1,42 @@
+name: Deploy Backend
+
+# Runs after Docker images are pushed to GHCR on main
+on:
+  workflow_run:
+    workflows: [Docker Build & Push]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    # Only deploy if the docker build succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      # Render deploy hooks trigger a new deploy.
+      # Set RENDER_DEPLOY_HOOK_URL in GitHub Settings → Secrets.
+      # Find it in your Render dashboard: Service → Settings → Deploy Hook.
+      - name: Trigger Render deploy
+        run: |
+          curl --fail -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": false}'
+
+      # Poll the health endpoint until the new version is live (up to ~3 min)
+      - name: Wait for health check
+        run: |
+          echo "Waiting 60s for deployment to start..."
+          sleep 60
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.BACKEND_URL }}/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed on attempt $i"
+              exit 0
+            fi
+            echo "Attempt $i: HTTP $STATUS — retrying in 15s"
+            sleep 15
+          done
+          echo "ERROR: health check never returned 200"
+          exit 1
