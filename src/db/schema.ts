@@ -7,7 +7,11 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-export const taskPriorityEnum = pgEnum('task_priority', ['High', 'Medium', 'Low']);
+export const taskPriorityEnum = pgEnum('task_priority', [
+  'High',
+  'Medium',
+  'Low',
+]);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -27,15 +31,9 @@ export const tasks = pgTable('tasks', {
     length: 1000,
   }),
 
-  completed: boolean('completed')
-    .default(false)
-    .notNull(),
+  completed: boolean('completed').default(false).notNull(),
 
-  createdAt: timestamp('created_at')
-    .defaultNow()
-    .notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
 
-  priority: taskPriorityEnum('priority')
-    .default('Medium')
-    .notNull(),
+  priority: taskPriorityEnum('priority').default('Medium').notNull(),
 });
