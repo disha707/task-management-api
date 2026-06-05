@@ -13,7 +13,10 @@ export class UsersService {
   }
 
   async create(email: string, passwordHash: string): Promise<User> {
-    const [user] = await db.insert(users).values({ email, passwordHash }).returning();
+    const [user] = await db
+      .insert(users)
+      .values({ email, passwordHash })
+      .returning();
     return user;
   }
 }

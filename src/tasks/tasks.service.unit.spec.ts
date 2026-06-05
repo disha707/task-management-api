@@ -27,7 +27,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 
-vi.mock('../db/db', () => ({ // stub
+vi.mock('../db/db', () => ({
+  // stub
   db: {
     select: vi.fn(),
     insert: vi.fn(),
@@ -62,7 +63,12 @@ describe('TasksService Unit Tests', () => {
       const result = await service.getTasks(); // entry point
 
       expect(result.data).toEqual([task]); // return value
-      expect(result.meta).toEqual({ page: 1, limit: 10, total: 1, totalPages: 1 }); // return value
+      expect(result.meta).toEqual({
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      }); // return value
     });
 
     it('returns correct totalPages when total > limit', async () => {
@@ -110,7 +116,10 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('returns all tasks when no priority filter is provided', async () => {
-      const tasks = [makeTask({ priority: 'High' }), makeTask({ id: 2, priority: 'Low' })];
+      const tasks = [
+        makeTask({ priority: 'High' }),
+        makeTask({ id: 2, priority: 'Low' }),
+      ];
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([{ total: 2 }]))
         .mockReturnValueOnce(mockChain(tasks));
@@ -127,7 +136,10 @@ describe('TasksService Unit Tests', () => {
         .mockReturnValueOnce(mockChain([{ total: 2 }]))
         .mockReturnValueOnce(mockChain([highTask, lowTask]));
 
-      const result = await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' }); // entry point
+      const result = await service.getTasks({
+        sortBy: 'priority',
+        sortOrder: 'asc',
+      }); // entry point
 
       expect(result.data[0].priority).toBe('High'); // return value
       expect(result.data[1].priority).toBe('Low'); // return value
@@ -177,10 +189,16 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('inserts task with description when provided', async () => {
-      const newTask = makeTask({ title: 'With desc', description: 'Some info' });
+      const newTask = makeTask({
+        title: 'With desc',
+        description: 'Some info',
+      });
       (db.insert as any).mockReturnValue(mockChain([newTask])); // stub
 
-      const result = await service.createTask({ title: 'With desc', description: 'Some info' }); // entry point
+      const result = await service.createTask({
+        title: 'With desc',
+        description: 'Some info',
+      }); // entry point
 
       expect(result.description).toBe('Some info'); // return value
     });
@@ -189,7 +207,10 @@ describe('TasksService Unit Tests', () => {
       const newTask = makeTask({ title: 'Urgent', priority: 'High' });
       (db.insert as any).mockReturnValue(mockChain([newTask])); // stub
 
-      const result = await service.createTask({ title: 'Urgent', priority: 'High' }); // entry point
+      const result = await service.createTask({
+        title: 'Urgent',
+        priority: 'High',
+      }); // entry point
 
       expect(result.priority).toBe('High'); // return value
     });
@@ -198,7 +219,9 @@ describe('TasksService Unit Tests', () => {
       const newTask = makeTask({ title: 'Default priority task' });
       (db.insert as any).mockReturnValue(mockChain([newTask])); // stub/mock
 
-      const result = await service.createTask({ title: 'Default priority task' }); // entry point
+      const result = await service.createTask({
+        title: 'Default priority task',
+      }); // entry point
 
       expect(result).toEqual(newTask); // return value
     });
@@ -238,7 +261,9 @@ describe('TasksService Unit Tests', () => {
       vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
       (db.update as any).mockReturnValue(mockChain([updated])); // stub
 
-      const result = await service.updateTask(1, { description: 'Updated desc' }); // entry point
+      const result = await service.updateTask(1, {
+        description: 'Updated desc',
+      }); // entry point
 
       expect(result.description).toBe('Updated desc'); // return value
     });
@@ -268,9 +293,13 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(new NotFoundException('Task with id 999 not found')); // spy
+      vi.spyOn(service, 'getTaskById').mockRejectedValue(
+        new NotFoundException('Task with id 999 not found'),
+      ); // spy
 
-      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException); // entry point / return value
+      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(
+        NotFoundException,
+      ); // entry point / return value
     });
   });
 
@@ -288,7 +317,9 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(new NotFoundException('Task with id 999 not found')); // spy
+      vi.spyOn(service, 'getTaskById').mockRejectedValue(
+        new NotFoundException('Task with id 999 not found'),
+      ); // spy
 
       await expect(service.deleteTask(999)).rejects.toThrow(NotFoundException); // entry point / return value
       expect(db.delete).not.toHaveBeenCalled(); // outgoing
@@ -302,7 +333,9 @@ describe('TasksService Unit Tests', () => {
       const task1 = makeTask({ id: 1 });
       const task2 = makeTask({ id: 2, title: 'Task 2' });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db)); // stub/mock
+      (db.transaction as any).mockImplementation(async (fn: Function) =>
+        fn(db),
+      ); // stub/mock
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([task2]));
@@ -317,13 +350,17 @@ describe('TasksService Unit Tests', () => {
     it('throws NotFoundException and aborts when a task is not found', async () => {
       const task1 = makeTask({ id: 1 });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db)); // stub
+      (db.transaction as any).mockImplementation(async (fn: Function) =>
+        fn(db),
+      ); // stub
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([])); // id 999 not found
       (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
 
-      await expect(service.deleteTasksInBatch({ ids: [1, 999] })).rejects.toThrow(NotFoundException); // entry point / return value
+      await expect(
+        service.deleteTasksInBatch({ ids: [1, 999] }),
+      ).rejects.toThrow(NotFoundException); // entry point / return value
     });
   });
 
@@ -338,7 +375,8 @@ describe('TasksService Unit Tests', () => {
 
       const result = await service.getStats(); // entry point
 
-      expect(result).toEqual({ // return value
+      expect(result).toEqual({
+        // return value
         total: 0,
         completed: 0,
         pending: 0,

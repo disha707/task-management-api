@@ -1,5 +1,13 @@
 import { Transform, Type } from 'class-transformer';
-import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class GetTasksQueryDto {
   @IsOptional()
@@ -28,7 +36,7 @@ export class GetTasksQueryDto {
   sortOrder?: 'asc' | 'desc' = 'desc';
 
   @IsOptional()
-  @Transform(({ value }) =>
+  @Transform(({ value }: { value: unknown }) =>
     value === 'true' ? true : value === 'false' ? false : value,
   )
   @IsBoolean()

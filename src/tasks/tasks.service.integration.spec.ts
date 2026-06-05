@@ -63,7 +63,10 @@ describe('TasksService Integration Tests', () => {
   let service: TasksService;
   const createdIds: number[] = [];
 
-  async function createTask(title: string, extra: Record<string, unknown> = {}) {
+  async function createTask(
+    title: string,
+    extra: Record<string, unknown> = {},
+  ) {
     const [task] = await db
       .insert(tasks)
       .values({ title, ...extra })
@@ -130,7 +133,9 @@ describe('TasksService Integration Tests', () => {
 
       const result = await service.getTasks({ search: 'drizzle search' });
 
-      expect(result.data.some((t) => t.title.includes('drizzle search'))).toBe(true);
+      expect(result.data.some((t) => t.title.includes('drizzle search'))).toBe(
+        true,
+      );
     });
 
     it('excludes non-matching tasks when search term is provided', async () => {
@@ -138,9 +143,14 @@ describe('TasksService Integration Tests', () => {
       await createTask(`${prefix} matching item`);
       await createTask(`${prefix} irrelevant item`);
 
-      const result = await service.getTasks({ search: 'matching item', limit: 100 });
+      const result = await service.getTasks({
+        search: 'matching item',
+        limit: 100,
+      });
 
-      expect(result.data.every((t) => t.title.includes('matching item'))).toBe(true);
+      expect(result.data.every((t) => t.title.includes('matching item'))).toBe(
+        true,
+      );
     });
 
     it('sorts by title ascending using tasks with different priorities', async () => {
@@ -173,7 +183,11 @@ describe('TasksService Integration Tests', () => {
       await createTask('Zebra task');
       await createTask('Alpha task');
 
-      const result = await service.getTasks({ sortBy: 'title', sortOrder: 'asc', limit: 100 });
+      const result = await service.getTasks({
+        sortBy: 'title',
+        sortOrder: 'asc',
+        limit: 100,
+      });
 
       const titles = result.data.map((t) => t.title);
       const sorted = [...titles].sort((a, b) => a.localeCompare(b));
@@ -184,7 +198,11 @@ describe('TasksService Integration Tests', () => {
       await createTask('Aardvark task');
       await createTask('Zeppelin task');
 
-      const result = await service.getTasks({ sortBy: 'title', sortOrder: 'desc', limit: 100 });
+      const result = await service.getTasks({
+        sortBy: 'title',
+        sortOrder: 'desc',
+        limit: 100,
+      });
 
       const titles = result.data.map((t) => t.title);
       const sorted = [...titles].sort((a, b) => b.localeCompare(a));
@@ -204,7 +222,9 @@ describe('TasksService Integration Tests', () => {
     });
 
     it('throws NotFoundException for a non-existent id', async () => {
-      await expect(service.getTaskById(999999)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(999999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -270,9 +290,11 @@ describe('TasksService Integration Tests', () => {
     });
 
     it('partial update: only changes provided fields', async () => {
-      const task = await createTask('Keep me', { completed: true } as any);
+      const task = await createTask('Keep me', { completed: true });
 
-      const updated = await service.updateTask(task.id, { title: 'Changed title' });
+      const updated = await service.updateTask(task.id, {
+        title: 'Changed title',
+      });
 
       expect(updated.title).toBe('Changed title');
       expect(updated.completed).toBe(true);
@@ -295,11 +317,15 @@ describe('TasksService Integration Tests', () => {
       const deleted = await service.deleteTask(task.id);
 
       expect(deleted.id).toBe(task.id);
-      await expect(service.getTaskById(task.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(task.id)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      await expect(service.deleteTask(999999)).rejects.toThrow(NotFoundException);
+      await expect(service.deleteTask(999999)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -315,8 +341,12 @@ describe('TasksService Integration Tests', () => {
       const deleted = await service.deleteTasksInBatch({ ids: [t1.id, t2.id] });
 
       expect(deleted).toHaveLength(2);
-      await expect(service.getTaskById(t1.id)).rejects.toThrow(NotFoundException);
-      await expect(service.getTaskById(t2.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(t1.id)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getTaskById(t2.id)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws and rolls back when any id is not found', async () => {
@@ -336,7 +366,10 @@ describe('TasksService Integration Tests', () => {
 
   describe('priority — createTask', () => {
     it('persists High priority and returns it on the row', async () => {
-      const task = await service.createTask({ title: 'High priority task', priority: 'High' });
+      const task = await service.createTask({
+        title: 'High priority task',
+        priority: 'High',
+      });
       createdIds.push(task.id);
 
       expect(task.priority).toBe('High');
@@ -408,7 +441,9 @@ describe('TasksService Integration Tests', () => {
     it('leaves existing priority unchanged when priority is absent from the DTO', async () => {
       const task = await createTask('Keep my priority', { priority: 'High' });
 
-      const updated = await service.updateTask(task.id, { title: 'Renamed task' });
+      const updated = await service.updateTask(task.id, {
+        title: 'Renamed task',
+      });
 
       expect(updated.priority).toBe('High');
     });
@@ -428,7 +463,9 @@ describe('TasksService Integration Tests', () => {
         .compile();
 
       app = module.createNestApplication();
-      app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+      app.useGlobalPipes(
+        new ValidationPipe({ whitelist: true, transform: true }),
+      );
       await app.init();
     });
 

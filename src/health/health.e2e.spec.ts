@@ -32,9 +32,10 @@ describe('Health check', () => {
   it('GET /health → 200 with { status: "ok" } and a timestamp', async () => {
     const res = await request(app.getHttpServer()).get('/health');
 
+    const body = res.body as { status: string; timestamp: number };
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe('ok');
-    expect(typeof res.body.timestamp).toBe('number');
+    expect(body.status).toBe('ok');
+    expect(typeof body.timestamp).toBe('number');
   });
 
   it('GET /health → 200 without Authorization header (public endpoint)', async () => {

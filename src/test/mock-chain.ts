@@ -9,10 +9,23 @@ import { vi } from 'vitest';
  *   - auth tests use:  from, where, values, returning
  */
 export function mockChain(value: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const p = Promise.resolve(value) as any;
-  const methods = ['from', 'where', 'orderBy', 'limit', 'offset', 'values', 'set', 'returning', 'groupBy'];
+  const methods = [
+    'from',
+    'where',
+    'orderBy',
+    'limit',
+    'offset',
+    'values',
+    'set',
+    'returning',
+    'groupBy',
+  ];
   for (const m of methods) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     p[m] = vi.fn().mockReturnValue(p);
   }
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return p;
 }

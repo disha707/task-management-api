@@ -35,7 +35,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotFoundException } from '@nestjs/common';
 
-vi.mock('../db/db', () => ({ // mock
+vi.mock('../db/db', () => ({
+  // mock
   db: {
     select: vi.fn(),
     insert: vi.fn(),
@@ -118,7 +119,12 @@ describe('TasksService Unit Tests (Mockist)', () => {
     it('calls db.select twice when sortBy is priority', async () => {
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([{ total: 2 }]))
-        .mockReturnValueOnce(mockChain([makeTask({ priority: 'High' }), makeTask({ id: 2, priority: 'Low' })]));
+        .mockReturnValueOnce(
+          mockChain([
+            makeTask({ priority: 'High' }),
+            makeTask({ id: 2, priority: 'Low' }),
+          ]),
+        );
 
       await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' }); // entry point
 
@@ -177,7 +183,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.insert once when priority is provided', async () => {
-      (db.insert as any).mockReturnValue(mockChain([makeTask({ priority: 'High' })])); // stub
+      (db.insert as any).mockReturnValue(
+        mockChain([makeTask({ priority: 'High' })]),
+      ); // stub
 
       await service.createTask({ title: 'Urgent task', priority: 'High' }); // entry point
 
@@ -200,7 +208,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
     it('calls getTaskById then db.update exactly once', async () => {
       const existing = makeTask();
       vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([makeTask({ title: 'Updated' })])); // stub
+      (db.update as any).mockReturnValue(
+        mockChain([makeTask({ title: 'Updated' })]),
+      ); // stub
 
       await service.updateTask(1, { title: 'Updated' }); // entry point
 
@@ -210,15 +220,21 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('does not call db.update when getTaskById throws NotFoundException', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(new NotFoundException()); // spy
+      vi.spyOn(service, 'getTaskById').mockRejectedValue(
+        new NotFoundException(),
+      ); // spy
 
-      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException); // entry point / return value
+      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(
+        NotFoundException,
+      ); // entry point / return value
       expect(db.update).not.toHaveBeenCalled(); // outgoing
     });
 
     it('calls db.update once when priority is provided in the DTO', async () => {
       vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
-      (db.update as any).mockReturnValue(mockChain([makeTask({ priority: 'Low' })])); // stub
+      (db.update as any).mockReturnValue(
+        mockChain([makeTask({ priority: 'Low' })]),
+      ); // stub
 
       await service.updateTask(1, { priority: 'Low' }); // entry point
 
@@ -226,8 +242,12 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.update once when priority is absent from the DTO', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask({ priority: 'High' })); // spy
-      (db.update as any).mockReturnValue(mockChain([makeTask({ title: 'Renamed', priority: 'High' })])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(
+        makeTask({ priority: 'High' }),
+      ); // spy
+      (db.update as any).mockReturnValue(
+        mockChain([makeTask({ title: 'Renamed', priority: 'High' })]),
+      ); // stub
 
       await service.updateTask(1, { title: 'Renamed' }); // entry point
 
@@ -251,7 +271,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('does not call db.delete when getTaskById throws NotFoundException', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(new NotFoundException()); // spy
+      vi.spyOn(service, 'getTaskById').mockRejectedValue(
+        new NotFoundException(),
+      ); // spy
 
       await expect(service.deleteTask(999)).rejects.toThrow(NotFoundException); // entry point / return value
       expect(db.delete).not.toHaveBeenCalled(); // outgoing
@@ -265,7 +287,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
       const task1 = makeTask({ id: 1 });
       const task2 = makeTask({ id: 2, title: 'Task 2' });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db)); // stub
+      (db.transaction as any).mockImplementation(async (fn: Function) =>
+        fn(db),
+      ); // stub
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([task2]));
@@ -281,7 +305,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
       const task2 = makeTask({ id: 2, title: 'Task 2' });
       const task3 = makeTask({ id: 3, title: 'Task 3' });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db)); // stub
+      (db.transaction as any).mockImplementation(async (fn: Function) =>
+        fn(db),
+      ); // stub
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([task2]))
@@ -296,13 +322,17 @@ describe('TasksService Unit Tests (Mockist)', () => {
     it('throws NotFoundException without completing all deletes when an id is missing', async () => {
       const task1 = makeTask({ id: 1 });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) => fn(db)); // stub
+      (db.transaction as any).mockImplementation(async (fn: Function) =>
+        fn(db),
+      ); // stub
       (db.select as any) // stub
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([])); // id 999 not found
       (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
 
-      await expect(service.deleteTasksInBatch({ ids: [1, 999] })).rejects.toThrow(NotFoundException); // entry point / return value
+      await expect(
+        service.deleteTasksInBatch({ ids: [1, 999] }),
+      ).rejects.toThrow(NotFoundException); // entry point / return value
     });
   });
 });
