@@ -43,6 +43,8 @@ import { TasksService } from './tasks.service';
 import { mockChain } from '../test/mock-chain';
 import { makeTask } from '../test/make-task';
 
+type Task = ReturnType<typeof makeTask>;
+
 describe('TasksService Unit Tests', () => {
   let service: TasksService;
 
@@ -51,14 +53,56 @@ describe('TasksService Unit Tests', () => {
     service = new TasksService();
   });
 
+  // ─── Stub helpers ─────────────────────────────────────────────────────────
+  //
+  // Each helper sets up db mocks for one service method call.
+  // stubGetTasks returns the dataChain so tests can assert on .offset etc.
+
+  function stubGetTasks(total: number, data: Task[] = []) {
+    const dataChain = mockChain(data);
+    (db.select as any)
+      .mockReturnValueOnce(mockChain([{ total }]))
+      .mockReturnValueOnce(dataChain);
+    return dataChain;
+  }
+
+  function stubSelectOne(task?: Task) {
+    (db.select as any).mockReturnValue(mockChain(task ? [task] : []));
+  }
+
+  function stubInsert(task: Task) {
+    (db.insert as any).mockReturnValue(mockChain([task]));
+  }
+
+  function stubUpdate(task: Task) {
+    (db.update as any).mockReturnValue(mockChain([task]));
+  }
+
+  function stubDelete() {
+    (db.delete as any).mockReturnValue(mockChain(undefined));
+  }
+
+  function stubTransaction() {
+    (db.transaction as any).mockImplementation(async (fn: Function) => fn(db));
+  }
+
+  function stubGetStats(
+    total: number,
+    completed: number,
+    byPriority: Array<{ priority: string; cnt: number }> = [],
+  ) {
+    (db.select as any)
+      .mockReturnValueOnce(mockChain([{ total }]))
+      .mockReturnValueOnce(mockChain([{ completed }]))
+      .mockReturnValueOnce(mockChain(byPriority));
+  }
+
   // ─── getTasks ─────────────────────────────────────────────────────────────
 
   describe('getTasks', () => {
     it('returns paginated data with meta using defaults', async () => {
       const task = makeTask();
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 1 }]))
-        .mockReturnValueOnce(mockChain([task]));
+      stubGetTasks(1, [task]);
 
       const result = await service.getTasks(); // entry point
 
@@ -72,9 +116,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('returns correct totalPages when total > limit', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 25 }]))
-        .mockReturnValueOnce(mockChain([]));
+      stubGetTasks(25);
 
       const result = await service.getTasks({ page: 1, limit: 10 }); // entry point
 
@@ -82,11 +124,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('passes search condition when search is provided', async () => {
-      const countChain = mockChain([{ total: 0 }]);
-      const dataChain = mockChain([]);
-      (db.select as any) // stub
-        .mockReturnValueOnce(countChain)
-        .mockReturnValueOnce(dataChain);
+      stubGetTasks(0);
 
       await service.getTasks({ search: 'drizzle' }); // entry point
 
@@ -94,9 +132,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('passes completed filter when provided', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 1 }]))
-        .mockReturnValueOnce(mockChain([makeTask({ completed: true })]));
+      stubGetTasks(1, [makeTask({ completed: true })]);
 
       const result = await service.getTasks({ completed: true }); // entry point
 
@@ -105,9 +141,7 @@ describe('TasksService Unit Tests', () => {
 
     it('returns only matching tasks when priority filter is provided', async () => {
       const lowTask = makeTask({ priority: 'Low' });
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 1 }]))
-        .mockReturnValueOnce(mockChain([lowTask]));
+      stubGetTasks(1, [lowTask]);
 
       const result = await service.getTasks({ priority: 'Low' }); // entry point
 
@@ -116,13 +150,10 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('returns all tasks when no priority filter is provided', async () => {
-      const tasks = [
+      stubGetTasks(2, [
         makeTask({ priority: 'High' }),
         makeTask({ id: 2, priority: 'Low' }),
-      ];
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 2 }]))
-        .mockReturnValueOnce(mockChain(tasks));
+      ]);
 
       const result = await service.getTasks({}); // entry point
 
@@ -132,9 +163,7 @@ describe('TasksService Unit Tests', () => {
     it('sorts by priority column when sortBy is priority', async () => {
       const highTask = makeTask({ priority: 'High' });
       const lowTask = makeTask({ id: 2, priority: 'Low' });
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 2 }]))
-        .mockReturnValueOnce(mockChain([highTask, lowTask]));
+      stubGetTasks(2, [highTask, lowTask]);
 
       const result = await service.getTasks({
         sortBy: 'priority',
@@ -146,10 +175,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('applies pagination offset for page 2', async () => {
-      const dataChain = mockChain([]);
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 20 }]))
-        .mockReturnValueOnce(dataChain);
+      const dataChain = stubGetTasks(20);
 
       await service.getTasks({ page: 2, limit: 5 }); // entry point
 
@@ -162,7 +188,7 @@ describe('TasksService Unit Tests', () => {
   describe('getTaskById', () => {
     it('returns the task when found', async () => {
       const task = makeTask();
-      (db.select as any).mockReturnValue(mockChain([task])); // stub
+      stubSelectOne(task);
 
       const result = await service.getTaskById(1); // entry point
 
@@ -170,7 +196,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      (db.select as any).mockReturnValue(mockChain([])); // stub
+      stubSelectOne();
 
       await expect(service.getTaskById(999)).rejects.toThrow(NotFoundException); // entry point / return value
     });
@@ -181,7 +207,7 @@ describe('TasksService Unit Tests', () => {
   describe('createTask', () => {
     it('inserts and returns a new task with title only', async () => {
       const newTask = makeTask({ title: 'New task' });
-      (db.insert as any).mockReturnValue(mockChain([newTask])); // stub/mock
+      stubInsert(newTask);
 
       const result = await service.createTask({ title: 'New task' }); // entry point
 
@@ -193,7 +219,7 @@ describe('TasksService Unit Tests', () => {
         title: 'With desc',
         description: 'Some info',
       });
-      (db.insert as any).mockReturnValue(mockChain([newTask])); // stub
+      stubInsert(newTask);
 
       const result = await service.createTask({
         title: 'With desc',
@@ -205,7 +231,7 @@ describe('TasksService Unit Tests', () => {
 
     it('stores the given priority when priority is provided', async () => {
       const newTask = makeTask({ title: 'Urgent', priority: 'High' });
-      (db.insert as any).mockReturnValue(mockChain([newTask])); // stub
+      stubInsert(newTask);
 
       const result = await service.createTask({
         title: 'Urgent',
@@ -217,7 +243,7 @@ describe('TasksService Unit Tests', () => {
 
     it('inserts and returns the task when priority is absent', async () => {
       const newTask = makeTask({ title: 'Default priority task' });
-      (db.insert as any).mockReturnValue(mockChain([newTask])); // stub/mock
+      stubInsert(newTask);
 
       const result = await service.createTask({
         title: 'Default priority task',
@@ -231,11 +257,10 @@ describe('TasksService Unit Tests', () => {
 
   describe('updateTask', () => {
     it('updates task title', async () => {
-      const existing = makeTask({ title: 'Old' });
-      const updated = makeTask({ title: 'New' });
-
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([updated])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(
+        makeTask({ title: 'Old' }),
+      ); // spy
+      stubUpdate(makeTask({ title: 'New' }));
 
       const result = await service.updateTask(1, { title: 'New' }); // entry point
 
@@ -243,11 +268,8 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates completed status', async () => {
-      const existing = makeTask();
-      const updated = makeTask({ completed: true });
-
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([updated])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubUpdate(makeTask({ completed: true }));
 
       const result = await service.updateTask(1, { completed: true }); // entry point
 
@@ -255,11 +277,8 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates description', async () => {
-      const existing = makeTask();
-      const updated = makeTask({ description: 'Updated desc' });
-
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([updated])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubUpdate(makeTask({ description: 'Updated desc' }));
 
       const result = await service.updateTask(1, {
         description: 'Updated desc',
@@ -269,11 +288,8 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates priority when priority is provided', async () => {
-      const existing = makeTask();
-      const updated = makeTask({ priority: 'Low' });
-
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([updated])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubUpdate(makeTask({ priority: 'Low' }));
 
       const result = await service.updateTask(1, { priority: 'Low' }); // entry point
 
@@ -281,11 +297,10 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('leaves priority unchanged when priority is absent from the DTO', async () => {
-      const existing = makeTask({ priority: 'High' });
-      const updated = makeTask({ title: 'New title', priority: 'High' });
-
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(mockChain([updated])); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(
+        makeTask({ priority: 'High' }),
+      ); // spy
+      stubUpdate(makeTask({ title: 'New title', priority: 'High' }));
 
       const result = await service.updateTask(1, { title: 'New title' }); // entry point
 
@@ -309,7 +324,7 @@ describe('TasksService Unit Tests', () => {
     it('deletes the task and returns it', async () => {
       const task = makeTask();
       vi.spyOn(service, 'getTaskById').mockResolvedValue(task); // spy
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub/mock
+      stubDelete();
 
       const result = await service.deleteTask(1); // entry point
 
@@ -333,13 +348,11 @@ describe('TasksService Unit Tests', () => {
       const task1 = makeTask({ id: 1 });
       const task2 = makeTask({ id: 2, title: 'Task 2' });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) =>
-        fn(db),
-      ); // stub/mock
-      (db.select as any) // stub
+      stubTransaction();
+      (db.select as any)
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([task2]));
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      stubDelete();
 
       const result = await service.deleteTasksInBatch({ ids: [1, 2] }); // entry point
 
@@ -350,13 +363,11 @@ describe('TasksService Unit Tests', () => {
     it('throws NotFoundException and aborts when a task is not found', async () => {
       const task1 = makeTask({ id: 1 });
 
-      (db.transaction as any).mockImplementation(async (fn: Function) =>
-        fn(db),
-      ); // stub
-      (db.select as any) // stub
+      stubTransaction();
+      (db.select as any)
         .mockReturnValueOnce(mockChain([task1]))
         .mockReturnValueOnce(mockChain([])); // id 999 not found
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      stubDelete();
 
       await expect(
         service.deleteTasksInBatch({ ids: [1, 999] }),
@@ -368,33 +379,24 @@ describe('TasksService Unit Tests', () => {
 
   describe('getStats', () => {
     it('returns zero counts when there are no tasks', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 0 }]))
-        .mockReturnValueOnce(mockChain([{ completed: 0 }]))
-        .mockReturnValueOnce(mockChain([]));
+      stubGetStats(0, 0);
 
       const result = await service.getStats(); // entry point
 
       expect(result).toEqual({
-        // return value
         total: 0,
         completed: 0,
         pending: 0,
         byPriority: { High: 0, Medium: 0, Low: 0 },
-      });
+      }); // return value
     });
 
     it('returns correct totals and priority breakdown for a mixed set', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 4 }]))
-        .mockReturnValueOnce(mockChain([{ completed: 2 }]))
-        .mockReturnValueOnce(
-          mockChain([
-            { priority: 'High', cnt: 2 },
-            { priority: 'Medium', cnt: 1 },
-            { priority: 'Low', cnt: 1 },
-          ]),
-        );
+      stubGetStats(4, 2, [
+        { priority: 'High', cnt: 2 },
+        { priority: 'Medium', cnt: 1 },
+        { priority: 'Low', cnt: 1 },
+      ]);
 
       const result = await service.getStats(); // entry point
 
@@ -405,10 +407,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('reports all tasks as pending when none are completed', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 2 }]))
-        .mockReturnValueOnce(mockChain([{ completed: 0 }]))
-        .mockReturnValueOnce(mockChain([{ priority: 'Medium', cnt: 2 }]));
+      stubGetStats(2, 0, [{ priority: 'Medium', cnt: 2 }]);
 
       const result = await service.getStats(); // entry point
 
