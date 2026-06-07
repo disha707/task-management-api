@@ -1,6 +1,6 @@
 # 10-Day Learning Journey — Task Management API
 
-**Apprentice:** Disha  
+**Owner:** Disha  
 **Organisation:** Incubyte  
 **Period:** Days 1–10  
 **Project:** Full-stack Task Management Application (NestJS + React + TypeScript)
