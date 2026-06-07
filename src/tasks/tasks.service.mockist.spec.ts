@@ -51,6 +51,8 @@ import { TasksService } from './tasks.service';
 import { mockChain } from '../test/mock-chain';
 import { makeTask } from '../test/make-task';
 
+type Task = ReturnType<typeof makeTask>;
+
 describe('TasksService Unit Tests (Mockist)', () => {
   let service: TasksService;
 
@@ -59,13 +61,51 @@ describe('TasksService Unit Tests (Mockist)', () => {
     service = new TasksService();
   });
 
+  // ─── Stub helpers ─────────────────────────────────────────────────────────
+  //
+  // stubGetTasks returns the dataChain so tests can assert on .offset.
+  // stubBatchSelects sets up one sequential select per task for batch ops.
+
+  function stubGetTasks(total: number, data: Task[] = []) {
+    const dataChain = mockChain(data);
+    (db.select as any)
+      .mockReturnValueOnce(mockChain([{ total }]))
+      .mockReturnValueOnce(dataChain);
+    return dataChain;
+  }
+
+  function stubSelectOne(task?: Task) {
+    (db.select as any).mockReturnValue(mockChain(task ? [task] : []));
+  }
+
+  function stubInsert(task: Task = makeTask()) {
+    (db.insert as any).mockReturnValue(mockChain([task]));
+  }
+
+  function stubUpdate(task: Task = makeTask()) {
+    (db.update as any).mockReturnValue(mockChain([task]));
+  }
+
+  function stubDelete() {
+    (db.delete as any).mockReturnValue(mockChain(undefined));
+  }
+
+  function stubTransaction() {
+    (db.transaction as any).mockImplementation(async (fn: Function) => fn(db));
+  }
+
+  function stubBatchSelects(...tasks: Array<Task | undefined>) {
+    const mock = db.select as any;
+    for (const task of tasks) {
+      mock.mockReturnValueOnce(mockChain(task ? [task] : []));
+    }
+  }
+
   // ─── getTasks ─────────────────────────────────────────────────────────────
 
   describe('getTasks', () => {
     it('calls db.select exactly twice — once for count, once for data', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 1 }]))
-        .mockReturnValueOnce(mockChain([makeTask()]));
+      stubGetTasks(1, [makeTask()]);
 
       await service.getTasks(); // entry point
 
@@ -73,9 +113,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('does not call db.insert, db.update, or db.delete', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 0 }]))
-        .mockReturnValueOnce(mockChain([]));
+      stubGetTasks(0);
 
       await service.getTasks(); // entry point
 
@@ -85,10 +123,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('applies offset = (page - 1) * limit to the data query', async () => {
-      const dataChain = mockChain([]);
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 20 }]))
-        .mockReturnValueOnce(dataChain);
+      const dataChain = stubGetTasks(20);
 
       await service.getTasks({ page: 3, limit: 5 }); // entry point
 
@@ -96,10 +131,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('applies offset = 0 for page 1', async () => {
-      const dataChain = mockChain([]);
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 5 }]))
-        .mockReturnValueOnce(dataChain);
+      const dataChain = stubGetTasks(5);
 
       await service.getTasks({ page: 1, limit: 10 }); // entry point
 
@@ -107,9 +139,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.select twice when priority filter is provided', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 1 }]))
-        .mockReturnValueOnce(mockChain([makeTask({ priority: 'Low' })]));
+      stubGetTasks(1, [makeTask({ priority: 'Low' })]);
 
       await service.getTasks({ priority: 'Low' }); // entry point
 
@@ -117,14 +147,10 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.select twice when sortBy is priority', async () => {
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([{ total: 2 }]))
-        .mockReturnValueOnce(
-          mockChain([
-            makeTask({ priority: 'High' }),
-            makeTask({ id: 2, priority: 'Low' }),
-          ]),
-        );
+      stubGetTasks(2, [
+        makeTask({ priority: 'High' }),
+        makeTask({ id: 2, priority: 'Low' }),
+      ]);
 
       await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' }); // entry point
 
@@ -136,7 +162,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
   describe('getTaskById', () => {
     it('calls db.select exactly once', async () => {
-      (db.select as any).mockReturnValue(mockChain([makeTask()])); // stub
+      stubSelectOne(makeTask());
 
       await service.getTaskById(1); // entry point
 
@@ -144,7 +170,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('does not call db.insert, db.update, or db.delete', async () => {
-      (db.select as any).mockReturnValue(mockChain([makeTask()])); // stub
+      stubSelectOne(makeTask());
 
       await service.getTaskById(1); // entry point
 
@@ -154,7 +180,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('throws NotFoundException without calling other db methods when not found', async () => {
-      (db.select as any).mockReturnValue(mockChain([])); // stub
+      stubSelectOne();
 
       await expect(service.getTaskById(999)).rejects.toThrow(NotFoundException); // entry point / return value
       expect(db.delete).not.toHaveBeenCalled(); // outgoing
@@ -165,7 +191,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
   describe('createTask', () => {
     it('calls db.insert exactly once', async () => {
-      (db.insert as any).mockReturnValue(mockChain([makeTask()])); // stub
+      stubInsert();
 
       await service.createTask({ title: 'New task' }); // entry point
 
@@ -173,7 +199,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('does not call db.select, db.update, or db.delete', async () => {
-      (db.insert as any).mockReturnValue(mockChain([makeTask()])); // stub
+      stubInsert();
 
       await service.createTask({ title: 'New task' }); // entry point
 
@@ -183,9 +209,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.insert once when priority is provided', async () => {
-      (db.insert as any).mockReturnValue(
-        mockChain([makeTask({ priority: 'High' })]),
-      ); // stub
+      stubInsert(makeTask({ priority: 'High' }));
 
       await service.createTask({ title: 'Urgent task', priority: 'High' }); // entry point
 
@@ -194,7 +218,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.insert once when priority is absent', async () => {
-      (db.insert as any).mockReturnValue(mockChain([makeTask()])); // stub
+      stubInsert();
 
       await service.createTask({ title: 'No priority task' }); // entry point
 
@@ -206,11 +230,8 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
   describe('updateTask', () => {
     it('calls getTaskById then db.update exactly once', async () => {
-      const existing = makeTask();
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(existing); // spy
-      (db.update as any).mockReturnValue(
-        mockChain([makeTask({ title: 'Updated' })]),
-      ); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubUpdate(makeTask({ title: 'Updated' }));
 
       await service.updateTask(1, { title: 'Updated' }); // entry point
 
@@ -232,9 +253,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
     it('calls db.update once when priority is provided in the DTO', async () => {
       vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
-      (db.update as any).mockReturnValue(
-        mockChain([makeTask({ priority: 'Low' })]),
-      ); // stub
+      stubUpdate(makeTask({ priority: 'Low' }));
 
       await service.updateTask(1, { priority: 'Low' }); // entry point
 
@@ -245,9 +264,7 @@ describe('TasksService Unit Tests (Mockist)', () => {
       vi.spyOn(service, 'getTaskById').mockResolvedValue(
         makeTask({ priority: 'High' }),
       ); // spy
-      (db.update as any).mockReturnValue(
-        mockChain([makeTask({ title: 'Renamed', priority: 'High' })]),
-      ); // stub
+      stubUpdate(makeTask({ title: 'Renamed', priority: 'High' }));
 
       await service.updateTask(1, { title: 'Renamed' }); // entry point
 
@@ -259,9 +276,8 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
   describe('deleteTask', () => {
     it('calls getTaskById then db.delete exactly once', async () => {
-      const task = makeTask();
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(task); // spy
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubDelete();
 
       await service.deleteTask(1); // entry point
 
@@ -284,16 +300,12 @@ describe('TasksService Unit Tests (Mockist)', () => {
 
   describe('deleteTasksInBatch', () => {
     it('calls db.transaction exactly once', async () => {
-      const task1 = makeTask({ id: 1 });
-      const task2 = makeTask({ id: 2, title: 'Task 2' });
-
-      (db.transaction as any).mockImplementation(async (fn: Function) =>
-        fn(db),
-      ); // stub
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([task1]))
-        .mockReturnValueOnce(mockChain([task2]));
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      stubTransaction();
+      stubBatchSelects(
+        makeTask({ id: 1 }),
+        makeTask({ id: 2, title: 'Task 2' }),
+      );
+      stubDelete();
 
       await service.deleteTasksInBatch({ ids: [1, 2] }); // entry point
 
@@ -301,18 +313,13 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('calls db.delete exactly once for all ids (batch delete)', async () => {
-      const task1 = makeTask({ id: 1 });
-      const task2 = makeTask({ id: 2, title: 'Task 2' });
-      const task3 = makeTask({ id: 3, title: 'Task 3' });
-
-      (db.transaction as any).mockImplementation(async (fn: Function) =>
-        fn(db),
-      ); // stub
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([task1]))
-        .mockReturnValueOnce(mockChain([task2]))
-        .mockReturnValueOnce(mockChain([task3]));
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      stubTransaction();
+      stubBatchSelects(
+        makeTask({ id: 1 }),
+        makeTask({ id: 2, title: 'Task 2' }),
+        makeTask({ id: 3, title: 'Task 3' }),
+      );
+      stubDelete();
 
       await service.deleteTasksInBatch({ ids: [1, 2, 3] }); // entry point
 
@@ -320,15 +327,9 @@ describe('TasksService Unit Tests (Mockist)', () => {
     });
 
     it('throws NotFoundException without completing all deletes when an id is missing', async () => {
-      const task1 = makeTask({ id: 1 });
-
-      (db.transaction as any).mockImplementation(async (fn: Function) =>
-        fn(db),
-      ); // stub
-      (db.select as any) // stub
-        .mockReturnValueOnce(mockChain([task1]))
-        .mockReturnValueOnce(mockChain([])); // id 999 not found
-      (db.delete as any).mockReturnValue(mockChain(undefined)); // stub
+      stubTransaction();
+      stubBatchSelects(makeTask({ id: 1 }), undefined); // undefined = id 999 not found
+      stubDelete();
 
       await expect(
         service.deleteTasksInBatch({ ids: [1, 999] }),

@@ -97,6 +97,13 @@ describe('TasksService Unit Tests', () => {
       .mockReturnValueOnce(mockChain(byPriority));
   }
 
+  function stubBatchSelects(...tasks: Array<Task | undefined>) {
+    const mock = db.select as any;
+    for (const task of tasks) {
+      mock.mockReturnValueOnce(mockChain(task ? [task] : []));
+    }
+  }
+
   // ─── getTasks ─────────────────────────────────────────────────────────────
 
   describe('getTasks', () => {
@@ -345,13 +352,11 @@ describe('TasksService Unit Tests', () => {
 
   describe('deleteTasksInBatch', () => {
     it('deletes multiple tasks within a transaction', async () => {
-      const task1 = makeTask({ id: 1 });
-      const task2 = makeTask({ id: 2, title: 'Task 2' });
-
       stubTransaction();
-      (db.select as any)
-        .mockReturnValueOnce(mockChain([task1]))
-        .mockReturnValueOnce(mockChain([task2]));
+      stubBatchSelects(
+        makeTask({ id: 1 }),
+        makeTask({ id: 2, title: 'Task 2' }),
+      );
       stubDelete();
 
       const result = await service.deleteTasksInBatch({ ids: [1, 2] }); // entry point
@@ -361,12 +366,8 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException and aborts when a task is not found', async () => {
-      const task1 = makeTask({ id: 1 });
-
       stubTransaction();
-      (db.select as any)
-        .mockReturnValueOnce(mockChain([task1]))
-        .mockReturnValueOnce(mockChain([])); // id 999 not found
+      stubBatchSelects(makeTask({ id: 1 }), undefined); // undefined = id 999 not found
       stubDelete();
 
       await expect(
