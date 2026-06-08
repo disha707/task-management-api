@@ -261,4 +261,45 @@ describe('TasksService', () => {
       await expect(service.getTaskById(task.id)).resolves.toBeDefined();
     });
   });
+
+  // ─── getStats ─────────────────────────────────────────────────────────────
+
+  describe('getStats', () => {
+    it('returns zero counts when there are no tasks', async () => {
+      const result = await service.getStats();
+
+      expect(result).toEqual({
+        total: 0,
+        completed: 0,
+        pending: 0,
+        byPriority: { High: 0, Medium: 0, Low: 0 },
+      });
+    });
+
+    it('returns correct totals and priority breakdown for a mixed set', async () => {
+      const h1 = await service.createTask({ title: 'H1', priority: 'High' });
+      const h2 = await service.createTask({ title: 'H2', priority: 'High' });
+      await service.createTask({ title: 'M1', priority: 'Medium' });
+      await service.createTask({ title: 'L1', priority: 'Low' });
+      await service.updateTask(h1.id, { completed: true });
+      await service.updateTask(h2.id, { completed: true });
+
+      const result = await service.getStats();
+
+      expect(result.total).toBe(4);
+      expect(result.completed).toBe(2);
+      expect(result.pending).toBe(2);
+      expect(result.byPriority).toEqual({ High: 2, Medium: 1, Low: 1 });
+    });
+
+    it('reports all tasks as pending when none are completed', async () => {
+      await service.createTask({ title: 'M1', priority: 'Medium' });
+      await service.createTask({ title: 'M2', priority: 'Medium' });
+
+      const result = await service.getStats();
+
+      expect(result.completed).toBe(0);
+      expect(result.pending).toBe(2);
+    });
+  });
 });
