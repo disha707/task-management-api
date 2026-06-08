@@ -171,4 +171,52 @@ describe('TasksService', () => {
       expect(result.priority).toBe('Medium');
     });
   });
+
+  // ─── updateTask ───────────────────────────────────────────────────────────
+
+  describe('updateTask', () => {
+    it('updates task title', async () => {
+      const task = await service.createTask({ title: 'Old' });
+
+      const result = await service.updateTask(task.id, { title: 'New' });
+
+      expect(result.title).toBe('New');
+    });
+
+    it('updates completed status', async () => {
+      const task = await service.createTask({ title: 'Task' });
+
+      const result = await service.updateTask(task.id, { completed: true });
+
+      expect(result.completed).toBe(true);
+    });
+
+    it('updates description', async () => {
+      const task = await service.createTask({ title: 'Task' });
+
+      const result = await service.updateTask(task.id, { description: 'Updated desc' });
+
+      expect(result.description).toBe('Updated desc');
+    });
+
+    it('updates priority', async () => {
+      const task = await service.createTask({ title: 'Task' });
+
+      const result = await service.updateTask(task.id, { priority: 'Low' });
+
+      expect(result.priority).toBe('Low');
+    });
+
+    it('leaves priority unchanged when not in the update payload', async () => {
+      const task = await service.createTask({ title: 'Task', priority: 'High' });
+
+      const result = await service.updateTask(task.id, { title: 'Renamed' });
+
+      expect(result.priority).toBe('High');
+    });
+
+    it('throws NotFoundException when task does not exist', async () => {
+      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException);
+    });
+  });
 });
