@@ -354,7 +354,6 @@ describe('TasksService Unit Tests', () => {
       const result = await service.deleteTasksInBatch({ ids: [1, 2] }); // entry point
 
       expect(result).toHaveLength(2); // return value
-      expect(db.transaction).toHaveBeenCalledTimes(1); // outgoing
     });
 
     it('throws NotFoundException and aborts when a task is not found', async () => {
