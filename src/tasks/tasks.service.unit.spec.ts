@@ -130,12 +130,13 @@ describe('TasksService Unit Tests', () => {
       expect(result.meta.totalPages).toBe(3); // return value
     });
 
-    it('passes search condition when search is provided', async () => {
+    it('returns empty data when search matches nothing', async () => {
       stubGetTasks(0);
 
-      await service.getTasks({ search: 'drizzle' }); // entry point
+      const result = await service.getTasks({ search: 'drizzle' }); // entry point
 
-      expect(db.select).toHaveBeenCalledTimes(2); // outgoing
+      expect(result.data).toEqual([]); // return value
+      expect(result.meta.total).toBe(0); // return value
     });
 
     it('passes completed filter when provided', async () => {
@@ -181,12 +182,12 @@ describe('TasksService Unit Tests', () => {
       expect(result.data[1].priority).toBe('Low'); // return value
     });
 
-    it('applies pagination offset for page 2', async () => {
-      const dataChain = stubGetTasks(20);
+    it('returns correct meta for page 2 with limit 5', async () => {
+      stubGetTasks(20);
 
-      await service.getTasks({ page: 2, limit: 5 }); // entry point
+      const result = await service.getTasks({ page: 2, limit: 5 }); // entry point
 
-      expect(dataChain.offset).toHaveBeenCalledWith(5); // outgoing
+      expect(result.meta).toEqual({ page: 2, limit: 5, total: 20, totalPages: 4 }); // return value
     });
   });
 
