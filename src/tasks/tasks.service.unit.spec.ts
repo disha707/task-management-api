@@ -50,7 +50,12 @@ describe('TasksService', () => {
       const result = await service.getTasks();
 
       expect(result.data).toHaveLength(1);
-      expect(result.meta).toEqual({ page: 1, limit: 10, total: 1, totalPages: 1 });
+      expect(result.meta).toEqual({
+        page: 1,
+        limit: 10,
+        total: 1,
+        totalPages: 1,
+      });
     });
 
     it('returns correct totalPages when total exceeds limit', async () => {
@@ -106,7 +111,10 @@ describe('TasksService', () => {
       await service.createTask({ title: 'Low task', priority: 'Low' });
       await service.createTask({ title: 'High task', priority: 'High' });
 
-      const result = await service.getTasks({ sortBy: 'priority', sortOrder: 'asc' });
+      const result = await service.getTasks({
+        sortBy: 'priority',
+        sortOrder: 'asc',
+      });
 
       expect(result.data[0].priority).toBe('High');
       expect(result.data[1].priority).toBe('Low');
@@ -119,7 +127,12 @@ describe('TasksService', () => {
 
       const result = await service.getTasks({ page: 2, limit: 5 });
 
-      expect(result.meta).toEqual({ page: 2, limit: 5, total: 20, totalPages: 4 });
+      expect(result.meta).toEqual({
+        page: 2,
+        limit: 5,
+        total: 20,
+        totalPages: 4,
+      });
       expect(result.data).toHaveLength(5);
     });
   });
@@ -160,13 +173,18 @@ describe('TasksService', () => {
     });
 
     it('stores the given priority', async () => {
-      const result = await service.createTask({ title: 'Urgent', priority: 'High' });
+      const result = await service.createTask({
+        title: 'Urgent',
+        priority: 'High',
+      });
 
       expect(result.priority).toBe('High');
     });
 
     it('defaults to Medium priority when none is provided', async () => {
-      const result = await service.createTask({ title: 'Default priority task' });
+      const result = await service.createTask({
+        title: 'Default priority task',
+      });
 
       expect(result.priority).toBe('Medium');
     });
@@ -194,7 +212,9 @@ describe('TasksService', () => {
     it('updates description', async () => {
       const task = await service.createTask({ title: 'Task' });
 
-      const result = await service.updateTask(task.id, { description: 'Updated desc' });
+      const result = await service.updateTask(task.id, {
+        description: 'Updated desc',
+      });
 
       expect(result.description).toBe('Updated desc');
     });
@@ -208,7 +228,10 @@ describe('TasksService', () => {
     });
 
     it('leaves priority unchanged when not in the update payload', async () => {
-      const task = await service.createTask({ title: 'Task', priority: 'High' });
+      const task = await service.createTask({
+        title: 'Task',
+        priority: 'High',
+      });
 
       const result = await service.updateTask(task.id, { title: 'Renamed' });
 
@@ -216,7 +239,9 @@ describe('TasksService', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException);
+      await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -229,7 +254,9 @@ describe('TasksService', () => {
       const result = await service.deleteTask(task.id);
 
       expect(result).toEqual(task);
-      await expect(service.getTaskById(task.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(task.id)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException when task does not exist', async () => {
@@ -247,8 +274,12 @@ describe('TasksService', () => {
       const result = await service.deleteTasksInBatch({ ids: [t1.id, t2.id] });
 
       expect(result).toHaveLength(2);
-      await expect(service.getTaskById(t1.id)).rejects.toThrow(NotFoundException);
-      await expect(service.getTaskById(t2.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(t1.id)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getTaskById(t2.id)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('throws NotFoundException and rolls back when a task is not found', async () => {
