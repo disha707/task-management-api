@@ -123,4 +123,52 @@ describe('TasksService', () => {
       expect(result.data).toHaveLength(5);
     });
   });
+
+  // ─── getTaskById ──────────────────────────────────────────────────────────
+
+  describe('getTaskById', () => {
+    it('returns the task when found', async () => {
+      const created = await service.createTask({ title: 'Test task' });
+
+      const result = await service.getTaskById(created.id);
+
+      expect(result).toEqual(created);
+    });
+
+    it('throws NotFoundException when task does not exist', async () => {
+      await expect(service.getTaskById(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── createTask ───────────────────────────────────────────────────────────
+
+  describe('createTask', () => {
+    it('returns a new task with the given title', async () => {
+      const result = await service.createTask({ title: 'New task' });
+
+      expect(result.title).toBe('New task');
+      expect(result.id).toBeDefined();
+    });
+
+    it('persists description when provided', async () => {
+      const result = await service.createTask({
+        title: 'With desc',
+        description: 'Some info',
+      });
+
+      expect(result.description).toBe('Some info');
+    });
+
+    it('stores the given priority', async () => {
+      const result = await service.createTask({ title: 'Urgent', priority: 'High' });
+
+      expect(result.priority).toBe('High');
+    });
+
+    it('defaults to Medium priority when none is provided', async () => {
+      const result = await service.createTask({ title: 'Default priority task' });
+
+      expect(result.priority).toBe('Medium');
+    });
+  });
 });
