@@ -219,4 +219,46 @@ describe('TasksService', () => {
       await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(NotFoundException);
     });
   });
+
+  // ─── deleteTask ───────────────────────────────────────────────────────────
+
+  describe('deleteTask', () => {
+    it('deletes the task and returns it', async () => {
+      const task = await service.createTask({ title: 'To delete' });
+
+      const result = await service.deleteTask(task.id);
+
+      expect(result).toEqual(task);
+      await expect(service.getTaskById(task.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException when task does not exist', async () => {
+      await expect(service.deleteTask(999)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  // ─── deleteTasksInBatch ───────────────────────────────────────────────────
+
+  describe('deleteTasksInBatch', () => {
+    it('deletes multiple tasks and returns them', async () => {
+      const t1 = await service.createTask({ title: 'Task 1' });
+      const t2 = await service.createTask({ title: 'Task 2' });
+
+      const result = await service.deleteTasksInBatch({ ids: [t1.id, t2.id] });
+
+      expect(result).toHaveLength(2);
+      await expect(service.getTaskById(t1.id)).rejects.toThrow(NotFoundException);
+      await expect(service.getTaskById(t2.id)).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws NotFoundException and rolls back when a task is not found', async () => {
+      const task = await service.createTask({ title: 'Task 1' });
+
+      await expect(
+        service.deleteTasksInBatch({ ids: [task.id, 999] }),
+      ).rejects.toThrow(NotFoundException);
+
+      await expect(service.getTaskById(task.id)).resolves.toBeDefined();
+    });
+  });
 });
