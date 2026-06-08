@@ -264,9 +264,7 @@ describe('TasksService Unit Tests', () => {
 
   describe('updateTask', () => {
     it('updates task title', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(
-        makeTask({ title: 'Old' }),
-      ); // spy
+      stubSelectOne(makeTask({ title: 'Old' }));
       stubUpdate(makeTask({ title: 'New' }));
 
       const result = await service.updateTask(1, { title: 'New' }); // entry point
@@ -275,7 +273,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates completed status', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubSelectOne(makeTask());
       stubUpdate(makeTask({ completed: true }));
 
       const result = await service.updateTask(1, { completed: true }); // entry point
@@ -284,7 +282,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates description', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubSelectOne(makeTask());
       stubUpdate(makeTask({ description: 'Updated desc' }));
 
       const result = await service.updateTask(1, {
@@ -295,7 +293,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('updates priority when priority is provided', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(makeTask()); // spy
+      stubSelectOne(makeTask());
       stubUpdate(makeTask({ priority: 'Low' }));
 
       const result = await service.updateTask(1, { priority: 'Low' }); // entry point
@@ -304,9 +302,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('leaves priority unchanged when priority is absent from the DTO', async () => {
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(
-        makeTask({ priority: 'High' }),
-      ); // spy
+      stubSelectOne(makeTask({ priority: 'High' }));
       stubUpdate(makeTask({ title: 'New title', priority: 'High' }));
 
       const result = await service.updateTask(1, { title: 'New title' }); // entry point
@@ -315,9 +311,7 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(
-        new NotFoundException('Task with id 999 not found'),
-      ); // spy
+      stubSelectOne();
 
       await expect(service.updateTask(999, { title: 'X' })).rejects.toThrow(
         NotFoundException,
