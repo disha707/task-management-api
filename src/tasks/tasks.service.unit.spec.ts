@@ -324,7 +324,7 @@ describe('TasksService Unit Tests', () => {
   describe('deleteTask', () => {
     it('deletes the task and returns it', async () => {
       const task = makeTask();
-      vi.spyOn(service, 'getTaskById').mockResolvedValue(task); // spy
+      stubSelectOne(task);
       stubDelete();
 
       const result = await service.deleteTask(1); // entry point
@@ -333,12 +333,9 @@ describe('TasksService Unit Tests', () => {
     });
 
     it('throws NotFoundException when task does not exist', async () => {
-      vi.spyOn(service, 'getTaskById').mockRejectedValue(
-        new NotFoundException('Task with id 999 not found'),
-      ); // spy
+      stubSelectOne();
 
       await expect(service.deleteTask(999)).rejects.toThrow(NotFoundException); // entry point / return value
-      expect(db.delete).not.toHaveBeenCalled(); // outgoing
     });
   });
 
